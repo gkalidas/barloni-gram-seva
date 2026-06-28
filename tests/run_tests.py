@@ -13,7 +13,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-SUITES = ["security_checks.py", "functional_checks.py"]
+SUITES = ["security_checks.py", "functional_checks.py", "api_e2e_checks.py"]
 
 
 def main() -> int:

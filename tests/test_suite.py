@@ -25,3 +25,7 @@ def test_security_checks():
 
 def test_functional_checks():
     _run("functional_checks.py")
+
+
+def test_api_e2e_checks():
+    _run("api_e2e_checks.py")

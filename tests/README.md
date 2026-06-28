@@ -26,6 +26,15 @@ once at import time and the suites need separate isolated databases.
 - **`functional_checks.py`** — mirrors `TESTING.md` sections A–O: public
   browse/search, signup & profile validation, eligibility scenarios, admin
   scheme management, admin reviews, dashboards, and data-integrity edge cases.
+- **`api_e2e_checks.py`** — black-box end-to-end: boots a **real uvicorn
+  server** and drives it over HTTP exactly as the frontend does (form posts,
+  multipart uploads, cookies, redirects, the `/admin/documents/add` fetch).
+  Outcomes are verified only through the API — by reading pages back and
+  following the same links/IDs a browser clicks — never via the DB.
+
+`security_checks.py` and `functional_checks.py` use FastAPI's in-process
+`TestClient`; `api_e2e_checks.py` uses a real network server, so it's the most
+faithful to production (and a bit slower to start).
 
 A few `TESTING.md` items remain **manual only** (the one-click launcher UX, how
 the CSV renders in LibreOffice/Excel, the real 5-minute lockout expiry, an
