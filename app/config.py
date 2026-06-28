@@ -12,6 +12,10 @@ class Settings:
     ADMIN_MOBILE: str = os.getenv("ADMIN_MOBILE", "9999999999")
     DATABASE_PATH: str = os.getenv("DATABASE_PATH", "data/gramseva.db")
 
+    # Optional CSV auto-loaded on startup (idempotent: skips existing users).
+    # Holds PII + passwords, so it is gitignored by default.
+    SEED_USERS_CSV: str = os.getenv("SEED_USERS_CSV", "users.csv")
+
     # Server
     HOST: str = os.getenv("HOST", "127.0.0.1")
     PORT: int = int(os.getenv("PORT", "8000"))

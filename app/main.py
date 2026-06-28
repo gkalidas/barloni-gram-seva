@@ -40,6 +40,31 @@ async def ensure_default_admin() -> None:
         await db.close()
 
 
+async def load_seed_users() -> None:
+    """Import users from settings.SEED_USERS_CSV if that file exists.
+
+    Idempotent: the importer skips users whose mobile/username already exist,
+    so this is safe to run on every startup. Errors never block startup.
+    """
+    csv_path = settings.SEED_USERS_CSV
+    if not csv_path or not os.path.isfile(csv_path):
+        return
+    from app.services import import_export_service
+    try:
+        with open(csv_path, "rb") as fh:
+            raw = fh.read()
+        summary = await import_export_service.import_users(raw)
+        note = (
+            f"[startup] Loaded users from {csv_path}: "
+            f"added {summary['added']}, skipped {summary['skipped']}"
+        )
+        if summary["errors"]:
+            note += f", {len(summary['errors'])} row error(s)"
+        print(note)
+    except Exception as exc:  # never let a bad file stop the app
+        print(f"[startup] Could not load users from {csv_path}: {exc}")
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="barloni-gram-seva")
 
@@ -72,6 +97,8 @@ def create_app() -> FastAPI:
         # Make sure every document a scheme requires is in the master list,
         # so users can always upload it from their locker.
         await document_service.sync_scheme_documents()
+        # Optionally auto-load users from a CSV (idempotent: skips existing).
+        await load_seed_users()
 
     # Exception handlers for auth dependencies
     @app.exception_handler(AuthRedirect)

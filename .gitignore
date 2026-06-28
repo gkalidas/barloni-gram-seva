@@ -4,6 +4,13 @@ __pycache__/
 data/*.db
 data/uploads/
 *.sqlite3
+
+# Startup user seed file — contains personal data + passwords, keep out of git
+users.csv
+# Exported data files (generated artifacts)
+schemes.csv
+# Editor lock files (LibreOffice/OpenOffice)
+.~lock.*#
 .venv/
 venv/
 .idea/
