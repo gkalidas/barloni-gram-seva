@@ -2,10 +2,13 @@
 import json
 
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 
 from app.auth import require_admin
-from app.services import user_service, scheme_service
+from app.services import user_service, scheme_service, document_service
+from app.constants import (
+    GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
+)
 
 router = APIRouter()
 
@@ -15,6 +18,26 @@ def _templates(request: Request):
 
 
 SCHEME_STATUSES = ["active", "closed", "upcoming"]
+
+
+def _scheme_form_context(request, user, scheme, action, documents, flash=None):
+    """Shared context for the add/edit scheme form template."""
+    ctx = {
+        "request": request,
+        "user": user,
+        "scheme": scheme,
+        "categories": scheme_service.CATEGORIES,
+        "statuses": SCHEME_STATUSES,
+        "documents": documents,
+        "genders": GENDERS,
+        "caste_categories": CASTE_CATEGORIES,
+        "occupations": OCCUPATIONS,
+        "land_ownership_options": LAND_OWNERSHIP,
+        "action": action,
+    }
+    if flash:
+        ctx["flash"] = flash
+    return ctx
 
 
 def _validate_json(text: str, expect_type):
@@ -133,17 +156,62 @@ async def admin_schemes(request: Request):
 @router.get("/admin/schemes/add", response_class=HTMLResponse)
 async def add_scheme_form(request: Request):
     user = await require_admin(request)
-    return _templates(request).TemplateResponse(request, 
+    documents = await document_service.list_documents()
+    return _templates(request).TemplateResponse(
+        request,
         "admin/scheme_form.html",
-        {
-            "request": request,
-            "user": user,
-            "scheme": None,
-            "categories": scheme_service.CATEGORIES,
-            "statuses": SCHEME_STATUSES,
-            "action": "/admin/schemes/add",
-        },
+        _scheme_form_context(request, user, None, "/admin/schemes/add", documents),
     )
+
+
+def _assemble_eligibility(form) -> dict:
+    """Build the eligibility_rules dict from structured form fields.
+
+    Blank / unticked fields are omitted, which the matcher treats as
+    "no restriction".
+    """
+    rules = {}
+
+    def num(key):
+        raw = (form.get(key) or "").strip()
+        if not raw:
+            return None
+        try:
+            return int(float(raw))
+        except ValueError:
+            return None
+
+    min_age = num("min_age")
+    max_age = num("max_age")
+    max_income = num("max_income")
+    if min_age is not None:
+        rules["min_age"] = min_age
+    if max_age is not None:
+        rules["max_age"] = max_age
+    if max_income is not None:
+        rules["max_income"] = max_income
+
+    gender = [g for g in form.getlist("rule_gender") if g in GENDERS]
+    if gender:
+        rules["gender"] = gender
+    caste = [c for c in form.getlist("rule_caste") if c in CASTE_CATEGORIES]
+    if caste:
+        rules["caste_category"] = caste
+    occupation = [o for o in form.getlist("rule_occupation") if o in OCCUPATIONS]
+    if occupation:
+        rules["occupation"] = occupation
+    land = [l for l in form.getlist("rule_land") if l in LAND_OWNERSHIP]
+    if land:
+        rules["land_ownership"] = land
+
+    if form.get("bpl_card_required") == "on":
+        rules["bpl_card_required"] = True
+    if form.get("has_disability") == "on":
+        rules["has_disability"] = True
+    if form.get("bank_account_required") == "on":
+        rules["bank_account_required"] = True
+
+    return rules
 
 
 def _extract_scheme_form(form) -> tuple:
@@ -153,15 +221,19 @@ def _extract_scheme_form(form) -> tuple:
     if not name:
         errors.append("Scheme name is required.")
 
-    rules, rules_err = _validate_json(form.get("eligibility_rules"), dict)
-    if rules_err:
-        errors.append("Eligibility rules — " + rules_err)
-    docs, docs_err = _validate_json(form.get("documents_required"), list)
-    if docs_err:
-        errors.append("Documents required — " + docs_err)
+    rules = _assemble_eligibility(form)
+    if (
+        rules.get("min_age") is not None
+        and rules.get("max_age") is not None
+        and rules["min_age"] > rules["max_age"]
+    ):
+        errors.append("Minimum age cannot be greater than maximum age.")
+
+    documents = [d.strip() for d in form.getlist("documents") if d.strip()]
+
     extra, extra_err = _validate_json(form.get("scheme_data"), dict)
     if extra_err:
-        errors.append("Scheme data — " + extra_err)
+        errors.append("Additional data — " + extra_err)
 
     data = {
         "name": name,
@@ -170,8 +242,8 @@ def _extract_scheme_form(form) -> tuple:
         "category": (form.get("category") or "").strip() or None,
         "objective": (form.get("objective") or "").strip() or None,
         "benefits": (form.get("benefits") or "").strip() or None,
-        "eligibility_rules": json.dumps(rules) if rules is not None else None,
-        "documents_required": json.dumps(docs) if docs is not None else None,
+        "eligibility_rules": json.dumps(rules) if rules else None,
+        "documents_required": json.dumps(documents) if documents else None,
         "how_to_apply": (form.get("how_to_apply") or "").strip() or None,
         "application_deadline": (form.get("application_deadline") or "").strip() or None,
         "status": (form.get("status") or "active").strip(),
@@ -180,23 +252,40 @@ def _extract_scheme_form(form) -> tuple:
     return data, errors
 
 
+def _form_to_scheme_view(form, scheme_id=None) -> dict:
+    """Re-present submitted values (with structured rules/docs) on validation error."""
+    return {
+        "id": scheme_id,
+        "name": form.get("name"),
+        "name_hi": form.get("name_hi"),
+        "ministry": form.get("ministry"),
+        "category": form.get("category"),
+        "objective": form.get("objective"),
+        "benefits": form.get("benefits"),
+        "how_to_apply": form.get("how_to_apply"),
+        "application_deadline": form.get("application_deadline"),
+        "status": form.get("status") or "active",
+        "scheme_data": form.get("scheme_data") or "",
+        "eligibility_rules": _assemble_eligibility(form),
+        "documents_required": [d for d in form.getlist("documents") if d.strip()],
+    }
+
+
 @router.post("/admin/schemes/add", response_class=HTMLResponse)
 async def add_scheme_submit(request: Request):
     user = await require_admin(request)
     form = await request.form()
     data, errors = _extract_scheme_form(form)
     if errors:
-        return _templates(request).TemplateResponse(request, 
+        documents = await document_service.list_documents()
+        return _templates(request).TemplateResponse(
+            request,
             "admin/scheme_form.html",
-            {
-                "request": request,
-                "user": user,
-                "scheme": _form_to_scheme_view(form),
-                "categories": scheme_service.CATEGORIES,
-                "statuses": SCHEME_STATUSES,
-                "action": "/admin/schemes/add",
-                "flash": ("error", " ".join(errors)),
-            },
+            _scheme_form_context(
+                request, user, _form_to_scheme_view(form),
+                "/admin/schemes/add", documents,
+                flash=("error", " ".join(errors)),
+            ),
             status_code=400,
         )
     await scheme_service.create_scheme(data)
@@ -209,29 +298,20 @@ async def edit_scheme_form(request: Request, scheme_id: int):
     scheme = await scheme_service.get_scheme(scheme_id)
     if scheme is None:
         return RedirectResponse("/admin/schemes", status_code=303)
-    # Re-encode JSON fields back to pretty strings for the textarea
-    scheme["eligibility_rules"] = (
-        json.dumps(scheme["eligibility_rules"], indent=2)
-        if scheme.get("eligibility_rules") else ""
-    )
-    scheme["documents_required"] = (
-        json.dumps(scheme["documents_required"], indent=2)
-        if scheme.get("documents_required") else ""
-    )
+    # eligibility_rules (dict) and documents_required (list) are used directly
+    # by the structured form. Only scheme_data uses a raw-JSON textarea.
     scheme["scheme_data"] = (
         json.dumps(scheme["scheme_data"], indent=2)
         if scheme.get("scheme_data") else ""
     )
-    return _templates(request).TemplateResponse(request, 
+    documents = await document_service.list_documents()
+    return _templates(request).TemplateResponse(
+        request,
         "admin/scheme_form.html",
-        {
-            "request": request,
-            "user": user,
-            "scheme": scheme,
-            "categories": scheme_service.CATEGORIES,
-            "statuses": SCHEME_STATUSES,
-            "action": f"/admin/schemes/{scheme_id}/edit",
-        },
+        _scheme_form_context(
+            request, user, scheme,
+            f"/admin/schemes/{scheme_id}/edit", documents,
+        ),
     )
 
 
@@ -241,26 +321,27 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
     form = await request.form()
     data, errors = _extract_scheme_form(form)
     if errors:
-        return _templates(request).TemplateResponse(request, 
+        documents = await document_service.list_documents()
+        return _templates(request).TemplateResponse(
+            request,
             "admin/scheme_form.html",
-            {
-                "request": request,
-                "user": user,
-                "scheme": _form_to_scheme_view(form, scheme_id),
-                "categories": scheme_service.CATEGORIES,
-                "statuses": SCHEME_STATUSES,
-                "action": f"/admin/schemes/{scheme_id}/edit",
-                "flash": ("error", " ".join(errors)),
-            },
+            _scheme_form_context(
+                request, user, _form_to_scheme_view(form, scheme_id),
+                f"/admin/schemes/{scheme_id}/edit", documents,
+                flash=("error", " ".join(errors)),
+            ),
             status_code=400,
         )
     await scheme_service.update_scheme(scheme_id, data)
     return RedirectResponse("/admin/schemes?msg=Scheme+updated", status_code=303)
 
 
-def _form_to_scheme_view(form, scheme_id=None) -> dict:
-    """Re-present submitted form values so the form repopulates on error."""
-    view = {key: form.get(key) for key in form.keys()}
-    if scheme_id is not None:
-        view["id"] = scheme_id
-    return view
+@router.post("/admin/documents/add")
+async def add_document_route(request: Request, name: str = Form(...)):
+    """Add a document to the master list. Used by the inline 'add' button."""
+    await require_admin(request)
+    doc = await document_service.add_document(name)
+    if doc is None:
+        return JSONResponse({"ok": False, "error": "Document name is required."},
+                            status_code=400)
+    return JSONResponse({"ok": True, "id": doc["id"], "name": doc["name"]})

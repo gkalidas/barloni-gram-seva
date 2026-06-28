@@ -38,6 +38,63 @@
     sync();
 })();
 
+// Inline "add document" on the admin scheme form. Saves to the shared master
+// list, then appends a (checked) checkbox without losing the rest of the form.
+(function () {
+    var btn = document.getElementById('addDocBtn');
+    var input = document.getElementById('newDocName');
+    var list = document.getElementById('documentsList');
+    if (!btn || !input || !list) return;
+
+    function exists(name) {
+        var boxes = list.querySelectorAll('input[name="documents"]');
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i].value.toLowerCase() === name.toLowerCase()) return boxes[i];
+        }
+        return null;
+    }
+
+    function addDoc() {
+        var name = input.value.trim();
+        if (!name) return;
+        var existing = exists(name);
+        if (existing) { existing.checked = true; input.value = ''; return; }
+
+        var body = new URLSearchParams();
+        body.append('name', name);
+        btn.disabled = true;
+        fetch('/admin/documents/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.ok) { alert(data.error || 'Could not add document.'); return; }
+                var hit = exists(data.name);
+                if (hit) { hit.checked = true; input.value = ''; return; }
+                var label = document.createElement('label');
+                label.className = 'checkbox-field';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.name = 'documents';
+                cb.value = data.name;
+                cb.checked = true;
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + data.name));
+                list.appendChild(label);
+                input.value = '';
+            })
+            .catch(function () { alert('Could not add document.'); })
+            .finally(function () { btn.disabled = false; });
+    }
+
+    btn.addEventListener('click', addDoc);
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); addDoc(); }
+    });
+})();
+
 // Confirm before rejecting a change request
 (function () {
     var forms = document.querySelectorAll('[data-confirm]');

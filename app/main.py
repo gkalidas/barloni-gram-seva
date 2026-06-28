@@ -64,7 +64,9 @@ def create_app() -> FastAPI:
     async def on_startup():
         await init_db()
         await ensure_default_admin()
-        # Seed sample schemes on first run
+        # Seed the master document catalogue and sample schemes on first run
+        from app.services import document_service
+        await document_service.seed_documents()
         from seed_schemes import seed
         await seed()
 

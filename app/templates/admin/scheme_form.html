@@ -55,19 +55,98 @@
         <label for="application_deadline">Application deadline</label>
         <input type="text" id="application_deadline" name="application_deadline" value="{{ scheme.application_deadline if scheme else '' }}" placeholder="e.g. ongoing or 2025-12-31">
     </div>
+
+    {% set er = (scheme.eligibility_rules if scheme else {}) or {} %}
+    <fieldset class="rules">
+        <legend>Eligibility rules</legend>
+        <p class="hint">Leave a field blank or unticked for "no restriction". A user must meet <strong>every</strong> rule you set to be eligible.</p>
+        <div class="grid grid-2">
+            <div class="field">
+                <label for="min_age">Minimum age</label>
+                <input type="number" id="min_age" name="min_age" min="0" value="{{ er.get('min_age') if er.get('min_age') is not none else '' }}">
+            </div>
+            <div class="field">
+                <label for="max_age">Maximum age</label>
+                <input type="number" id="max_age" name="max_age" min="0" value="{{ er.get('max_age') if er.get('max_age') is not none else '' }}">
+            </div>
+        </div>
+        <div class="field">
+            <label>Gender</label>
+            {% set sel = er.get('gender') or [] %}
+            <div class="checks">
+                {% for g in genders %}
+                <label class="checkbox-field"><input type="checkbox" name="rule_gender" value="{{ g }}" {% if g in sel %}checked{% endif %}> {{ g | title }}</label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="field">
+            <label>Caste category</label>
+            {% set sel = er.get('caste_category') or [] %}
+            <div class="checks">
+                {% for c in caste_categories %}
+                <label class="checkbox-field"><input type="checkbox" name="rule_caste" value="{{ c }}" {% if c in sel %}checked{% endif %}> {{ c | upper }}</label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="field">
+            <label for="max_income">Maximum annual family income (₹)</label>
+            <input type="number" id="max_income" name="max_income" min="0" step="1000" value="{{ er.get('max_income') if er.get('max_income') is not none else '' }}">
+        </div>
+        <div class="field">
+            <label>Occupation</label>
+            {% set sel = er.get('occupation') or [] %}
+            <div class="checks">
+                {% for o in occupations %}
+                <label class="checkbox-field"><input type="checkbox" name="rule_occupation" value="{{ o }}" {% if o in sel %}checked{% endif %}> {{ o | replace('_',' ') | title }}</label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="field">
+            <label>Land ownership</label>
+            {% set sel = er.get('land_ownership') or [] %}
+            <div class="checks">
+                {% for l in land_ownership_options %}
+                <label class="checkbox-field"><input type="checkbox" name="rule_land" value="{{ l }}" {% if l in sel %}checked{% endif %}> {{ l | title }}</label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="field checkbox-field">
+            <input type="checkbox" id="bpl_card_required" name="bpl_card_required" {% if er.get('bpl_card_required') %}checked{% endif %}>
+            <label for="bpl_card_required">Must have a BPL card</label>
+        </div>
+        <div class="field checkbox-field">
+            <input type="checkbox" id="has_disability" name="has_disability" {% if er.get('has_disability') %}checked{% endif %}>
+            <label for="has_disability">Must have a disability</label>
+        </div>
+        <div class="field checkbox-field">
+            <input type="checkbox" id="bank_account_required" name="bank_account_required" {% if er.get('bank_account_required') %}checked{% endif %}>
+            <label for="bank_account_required">Must have an Aadhaar-linked bank account</label>
+        </div>
+    </fieldset>
+
     <div class="field">
-        <label for="eligibility_rules">Eligibility rules (JSON object)</label>
-        <textarea id="eligibility_rules" name="eligibility_rules" placeholder='{"min_age": 18, "max_income": 250000}'>{{ scheme.eligibility_rules if scheme else '' }}</textarea>
-        <span class="hint">Keys: min_age, max_age, gender, caste_category, max_income, bpl_card_required, occupation, land_ownership, has_disability, bank_account_required. Use null or omit for no restriction.</span>
+        <label>Documents required</label>
+        {% set docs_sel = (scheme.documents_required if scheme else []) or [] %}
+        <div id="documentsList" class="checks doc-checklist">
+            {% for d in documents %}
+            <label class="checkbox-field"><input type="checkbox" name="documents" value="{{ d.name }}" {% if d.name in docs_sel %}checked{% endif %}> {{ d.name }}</label>
+            {% endfor %}
+        </div>
+        <div class="add-doc">
+            <input type="text" id="newDocName" placeholder="Add a new document…" autocomplete="off">
+            <button type="button" class="btn btn-sm btn-outline" id="addDocBtn">+ Add</button>
+        </div>
+        <span class="hint">A document you add here is saved to the shared list and becomes available for every scheme.</span>
     </div>
-    <div class="field">
-        <label for="documents_required">Documents required (JSON array)</label>
-        <textarea id="documents_required" name="documents_required" placeholder='["Aadhaar card", "Bank passbook"]'>{{ scheme.documents_required if scheme else '' }}</textarea>
-    </div>
-    <div class="field">
-        <label for="scheme_data">Additional data (JSON object, optional)</label>
-        <textarea id="scheme_data" name="scheme_data">{{ scheme.scheme_data if scheme else '' }}</textarea>
-    </div>
+
+    <details class="advanced">
+        <summary>Advanced: additional data (JSON, optional)</summary>
+        <div class="field" style="margin-top:0.6rem">
+            <textarea id="scheme_data" name="scheme_data" placeholder='{"helpline": "1800-..."}'>{{ scheme.scheme_data if scheme else '' }}</textarea>
+            <span class="hint">Optional free-form JSON for extra fields. Leave blank if unsure.</span>
+        </div>
+    </details>
+
     <button class="btn btn-green btn-block" type="submit">{{ 'Save changes' if scheme and scheme.id else 'Add scheme' }}</button>
 </form>
 </div>

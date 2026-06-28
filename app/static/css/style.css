@@ -301,3 +301,47 @@ th { background: var(--gray-bg); }
 .text-center { text-align: center; }
 ul.clean { padding-left: 1.2rem; }
 .inline-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ---- Scheme form: eligibility + documents ---- */
+fieldset.rules {
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+fieldset.rules legend {
+    font-weight: 700;
+    padding: 0 0.4rem;
+    color: var(--blue);
+}
+.checks {
+    display: grid;
+    gap: 0.3rem 1rem;
+    grid-template-columns: 1fr;
+}
+@media (min-width: 500px) {
+    .checks { grid-template-columns: 1fr 1fr; }
+    .doc-checklist { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 760px) {
+    .doc-checklist { grid-template-columns: 1fr 1fr 1fr; }
+}
+.doc-checklist {
+    border: 1px solid var(--gray-line);
+    border-radius: var(--radius);
+    padding: 0.7rem;
+    margin-bottom: 0.6rem;
+}
+.add-doc {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.add-doc input { flex: 1; }
+.advanced { margin-bottom: 1rem; }
+.advanced summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 0.4rem 0;
+}

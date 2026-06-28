@@ -6,21 +6,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import require_user
 from app.services import user_service, scheme_service, eligibility_service
+from app.constants import GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP
 
 router = APIRouter()
 
 
 def _templates(request: Request):
     return request.app.state.templates
-
-
-GENDERS = ["male", "female", "other"]
-CASTE_CATEGORIES = ["general", "obc", "sc", "st"]
-OCCUPATIONS = [
-    "farmer", "labourer", "self_employed", "salaried",
-    "student", "unemployed", "other",
-]
-LAND_OWNERSHIP = ["landless", "marginal", "small", "large"]
 
 
 def _calc_age(dob_str: str):

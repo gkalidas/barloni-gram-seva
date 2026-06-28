@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS profile_change_requests (
 );
 """
 
+CREATE_DOCUMENTS = """
+CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+"""
+
 CREATE_SCHEMES = """
 CREATE TABLE IF NOT EXISTS schemes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +88,7 @@ async def init_db() -> None:
     try:
         await db.execute(CREATE_USERS)
         await db.execute(CREATE_CHANGE_REQUESTS)
+        await db.execute(CREATE_DOCUMENTS)
         await db.execute(CREATE_SCHEMES)
         await db.commit()
     finally:
