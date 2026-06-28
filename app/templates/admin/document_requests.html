@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Document Approvals — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Back to admin</a></p>
+<h1>Document Approvals</h1>
+
+<div class="inline-actions" style="margin-bottom:1rem">
+    <a class="btn btn-sm {{ '' if status=='pending' else 'btn-outline' }}" href="/admin/document-requests?status=pending">Pending</a>
+    <a class="btn btn-sm {{ '' if status=='approved' else 'btn-outline' }}" href="/admin/document-requests?status=approved">Approved</a>
+    <a class="btn btn-sm {{ '' if status=='rejected' else 'btn-outline' }}" href="/admin/document-requests?status=rejected">Rejected</a>
+    <a class="btn btn-sm {{ '' if status=='all' else 'btn-outline' }}" href="/admin/document-requests?status=all">All</a>
+</div>
+
+{% if requests %}
+<div class="table-wrap">
+<table>
+    <thead><tr><th>User</th><th>Document</th><th>Number</th><th>File</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+    {% for r in requests %}
+    <tr>
+        <td>{{ r.username }}<br><span class="muted">{{ r.mobile }}</span></td>
+        <td>{{ r.document_name }}</td>
+        <td>{{ r.doc_number or '—' }}</td>
+        <td>{% if r.file_path %}<a href="/documents/file/{{ r.id }}" target="_blank">View</a>{% else %}—{% endif %}</td>
+        <td>
+            {% if r.status == 'approved' %}<span class="pill pill-green">Approved</span>
+            {% elif r.status == 'pending' %}<span class="pill pill-orange">Pending</span>
+            {% else %}<span class="pill pill-red">Rejected</span>{% endif %}
+            {% if r.status == 'rejected' and r.rejection_reason %}<br><span class="muted">{{ r.rejection_reason }}</span>{% endif %}
+        </td>
+        <td>
+            {% if r.status == 'pending' %}
+            <form method="post" action="/admin/document-requests/{{ r.id }}/approve" style="margin-bottom:0.4rem" data-confirm="Approve this document?">
+                <button class="btn btn-sm btn-green" type="submit">Approve</button>
+            </form>
+            <form method="post" action="/admin/document-requests/{{ r.id }}/reject" class="inline-actions">
+                <input type="text" name="rejection_reason" placeholder="Reason" required style="min-height:36px;padding:0.3rem 0.5rem">
+                <button class="btn btn-sm btn-red" type="submit">Reject</button>
+            </form>
+            {% else %}—{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card text-center"><p>No {{ status if status != 'all' else '' }} documents.</p></div>
+{% endif %}
+{% endblock %}

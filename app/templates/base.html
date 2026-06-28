@@ -19,6 +19,9 @@
             <a href="/schemes">Schemes</a>
             {% if user %}
                 <a href="/dashboard">Dashboard</a>
+                {% if user.role != 'admin' %}
+                    <a href="/documents">Documents</a>
+                {% endif %}
                 {% if user.role == 'admin' %}
                     <a href="/admin">Admin</a>
                 {% endif %}

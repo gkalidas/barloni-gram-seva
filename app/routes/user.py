@@ -1,11 +1,15 @@
-"""User routes: dashboard, profile view/edit, eligible schemes."""
+"""User routes: dashboard, profile view/edit, eligible schemes, document locker."""
+import os
 from datetime import date, datetime
 
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
 from app.auth import require_user
-from app.services import user_service, scheme_service, eligibility_service
+from app.services import (
+    user_service, scheme_service, eligibility_service,
+    document_service, user_document_service,
+)
 from app.constants import GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP
 
 router = APIRouter()
@@ -226,7 +230,7 @@ async def my_schemes(request: Request):
     if profile:
         schemes = await scheme_service.list_schemes(only_active=True)
         eligible = eligibility_service.matching_schemes(profile, schemes)
-    return _templates(request).TemplateResponse(request, 
+    return _templates(request).TemplateResponse(request,
         "user/eligibility.html",
         {
             "request": request,
@@ -235,3 +239,102 @@ async def my_schemes(request: Request):
             "schemes": eligible,
         },
     )
+
+
+# --- Document locker -------------------------------------------------------
+
+async def _documents_context(request, user, flash=None):
+    docs = await user_document_service.list_user_documents(user["id"])
+    have = {d["document_name"] for d in docs}
+    master = await document_service.list_documents()
+    # Documents the admin asked for in the most recent rejected change request.
+    latest = await user_service.latest_change_request(user["id"])
+    requested = (
+        latest["required_documents"]
+        if latest and latest.get("status") == "rejected" else []
+    )
+    ctx = {
+        "request": request,
+        "user": user,
+        "documents": docs,
+        "have": have,
+        "master": master,
+        "requested": requested,
+        "allowed_ext": ", ".join(sorted(user_document_service.ALLOWED_EXTENSIONS)),
+        "max_mb": user_document_service.MAX_FILE_BYTES // (1024 * 1024),
+    }
+    if flash:
+        ctx["flash"] = flash
+    return ctx
+
+
+@router.get("/documents", response_class=HTMLResponse)
+async def documents_page(request: Request):
+    user = await require_user(request)
+    ctx = await _documents_context(request, user)
+    return _templates(request).TemplateResponse(request, "user/documents.html", ctx)
+
+
+@router.post("/documents", response_class=HTMLResponse)
+async def upload_document(
+    request: Request,
+    document_name: str = Form(...),
+    doc_number: str = Form(""),
+    file: UploadFile = File(...),
+):
+    user = await require_user(request)
+    document_name = document_name.strip()
+    doc_number = doc_number.strip()
+
+    master_names = {d["name"] for d in await document_service.list_documents()}
+    content = await file.read()
+
+    error = None
+    if document_name not in master_names:
+        error = "Please choose a document from the list."
+    elif not file.filename or not user_document_service.is_allowed_file(file.filename):
+        error = f"File must be one of: {', '.join(sorted(user_document_service.ALLOWED_EXTENSIONS))}."
+    elif not content:
+        error = "The uploaded file is empty."
+    elif len(content) > user_document_service.MAX_FILE_BYTES:
+        mb = user_document_service.MAX_FILE_BYTES // (1024 * 1024)
+        error = f"File is too large (max {mb} MB)."
+
+    if error:
+        ctx = await _documents_context(request, user, flash=("error", error))
+        return _templates(request).TemplateResponse(
+            request, "user/documents.html", ctx, status_code=400,
+        )
+
+    path = user_document_service.save_file(user["id"], file.filename, content)
+    _, old_path = await user_document_service.upsert_pending(
+        user["id"], document_name, doc_number, path,
+    )
+    if old_path and old_path != path:
+        user_document_service.delete_file(old_path)
+    return RedirectResponse(
+        "/documents?msg=Document+uploaded+and+sent+for+approval", status_code=303,
+    )
+
+
+@router.post("/documents/{doc_id}/delete")
+async def delete_document(request: Request, doc_id: int):
+    user = await require_user(request)
+    old_path = await user_document_service.delete_user_document(doc_id, user["id"])
+    if old_path:
+        user_document_service.delete_file(old_path)
+    return RedirectResponse("/documents?msg=Document+removed", status_code=303)
+
+
+@router.get("/documents/file/{doc_id}")
+async def serve_document_file(request: Request, doc_id: int):
+    user = await require_user(request)
+    doc = await user_document_service.get_user_document(doc_id)
+    if not doc or not doc.get("file_path"):
+        return Response("Not found", status_code=404)
+    # Only the owner or an admin may view the file.
+    if doc["user_id"] != user["id"] and user.get("role") != "admin":
+        return Response("Forbidden", status_code=403)
+    if not os.path.isfile(doc["file_path"]):
+        return Response("File missing", status_code=404)
+    return FileResponse(doc["file_path"])

@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .env
 data/*.db
+data/uploads/
 *.sqlite3
 .venv/
 venv/

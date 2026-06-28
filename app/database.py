@@ -46,6 +46,24 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 """
 
+CREATE_USER_DOCUMENTS = """
+CREATE TABLE IF NOT EXISTS user_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    document_name TEXT NOT NULL,         -- matches a name in the documents master list
+    doc_number TEXT,                     -- e.g. the Aadhaar / account number
+    file_path TEXT,                      -- stored scan/photocopy (not public)
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'approved', 'rejected'
+    rejection_reason TEXT,
+    reviewed_by INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, document_name),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES users(id)
+);
+"""
+
 CREATE_SCHEMES = """
 CREATE TABLE IF NOT EXISTS schemes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +116,7 @@ async def init_db() -> None:
         await db.execute(CREATE_USERS)
         await db.execute(CREATE_CHANGE_REQUESTS)
         await db.execute(CREATE_DOCUMENTS)
+        await db.execute(CREATE_USER_DOCUMENTS)
         await db.execute(CREATE_SCHEMES)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")

@@ -31,6 +31,7 @@
     <div class="inline-actions">
         <a class="btn btn-green" href="/my-schemes">View eligible schemes</a>
         <a class="btn btn-outline" href="/profile">View profile</a>
+        <a class="btn btn-outline" href="/documents">My documents</a>
     </div>
 </div>
 {% if latest_request and latest_request.status == 'pending' %}
@@ -39,7 +40,7 @@
 <div class="flash flash-error">
     Your recent profile change request was <strong>rejected</strong>{% if latest_request.reviewed_at %} on {{ latest_request.reviewed_at }}{% endif %}.
     {% if latest_request.rejection_reason %}<br>Reason: {{ latest_request.rejection_reason }}{% endif %}
-    {% if latest_request.required_documents %}<br>Please keep these documents ready: <strong>{{ latest_request.required_documents | join(', ') }}</strong>{% endif %}
+    {% if latest_request.required_documents %}<br>Please upload these documents: <strong>{{ latest_request.required_documents | join(', ') }}</strong> &middot; <a href="/documents">Upload documents</a>{% endif %}
     <br><a href="/profile/edit">Edit your profile to try again</a> &middot; <a href="/profile">see request history</a>
 </div>
 {% endif %}

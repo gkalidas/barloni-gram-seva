@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Resp
 from app.auth import require_admin
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
+    user_document_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -65,6 +66,7 @@ async def admin_dashboard(request: Request):
             "request": request,
             "user": user,
             "pending_count": await user_service.count_pending_requests(),
+            "pending_doc_count": await user_document_service.count_pending_document_requests(),
             "user_count": await user_service.count_users(),
             "scheme_count": await scheme_service.count_schemes(),
         },
@@ -428,3 +430,47 @@ async def template_users_route(request: Request):
 async def template_schemes_route(request: Request):
     await require_admin(request)
     return _csv_download(import_export_service.scheme_template_csv(), "schemes-template.csv")
+
+
+# --- User document review --------------------------------------------------
+
+@router.get("/admin/document-requests", response_class=HTMLResponse)
+async def document_requests(request: Request, status: str = "pending"):
+    user = await require_admin(request)
+    requests = await user_document_service.list_document_requests(
+        status=status if status != "all" else None
+    )
+    return _templates(request).TemplateResponse(
+        request,
+        "admin/document_requests.html",
+        {
+            "request": request,
+            "user": user,
+            "requests": requests,
+            "status": status,
+        },
+    )
+
+
+@router.post("/admin/document-requests/{doc_id}/approve")
+async def approve_document_route(request: Request, doc_id: int):
+    admin = await require_admin(request)
+    ok = await user_document_service.approve_document(doc_id, admin["id"])
+    msg = "Document+approved" if ok else "Document+not+found+or+already+reviewed"
+    return RedirectResponse(f"/admin/document-requests?msg={msg}", status_code=303)
+
+
+@router.post("/admin/document-requests/{doc_id}/reject")
+async def reject_document_route(
+    request: Request, doc_id: int, rejection_reason: str = Form(...),
+):
+    admin = await require_admin(request)
+    reason = rejection_reason.strip()
+    if not reason:
+        return RedirectResponse(
+            "/admin/document-requests?msg=Rejection+reason+is+required",
+            status_code=303,
+        )
+    ok = await user_document_service.reject_document(doc_id, admin["id"], reason)
+    msg = "Document+rejected" if ok else "Document+not+found+or+already+reviewed"
+    return RedirectResponse(f"/admin/document-requests?msg={msg}", status_code=303)
