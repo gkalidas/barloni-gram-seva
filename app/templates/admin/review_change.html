@@ -9,6 +9,7 @@
 <div class="flash flash-info">
     This request is <strong>{{ change.status }}</strong>{% if change.reviewed_at %} (reviewed {{ change.reviewed_at }}){% endif %}.
     {% if change.rejection_reason %}<br>Reason: {{ change.rejection_reason }}{% endif %}
+    {% if change.required_documents %}<br>Documents requested: {{ change.required_documents | join(', ') }}{% endif %}
 </div>
 {% endif %}
 
@@ -43,7 +44,16 @@
         <form method="post" action="/admin/change-requests/{{ change.id }}/reject">
             <div class="field">
                 <label for="rejection_reason">Reason for rejection</label>
-                <textarea id="rejection_reason" name="rejection_reason" required placeholder="Explain why this change is rejected…"></textarea>
+                <textarea id="rejection_reason" name="rejection_reason" placeholder="Explain why this change is rejected…"></textarea>
+            </div>
+            <div class="field">
+                <label>Supporting documents to request from the user</label>
+                <div class="checks doc-checklist">
+                    {% for d in documents %}
+                    <label class="checkbox-field"><input type="checkbox" name="required_documents" value="{{ d.name }}"> {{ d.name }}</label>
+                    {% endfor %}
+                </div>
+                <span class="hint">Tick the documents the user should provide. Give a reason, select documents, or both.</span>
             </div>
             <button class="btn btn-red btn-block" type="submit">Reject</button>
         </form>

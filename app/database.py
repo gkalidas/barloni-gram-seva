@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS profile_change_requests (
     new_values TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
+    required_documents TEXT,            -- JSON array of supporting docs the user must supply
     reviewed_by INTEGER,
     requested_at TEXT DEFAULT (datetime('now')),
     reviewed_at TEXT,
@@ -81,8 +82,16 @@ async def get_db() -> aiosqlite.Connection:
     return db
 
 
+async def _ensure_column(db, table: str, column: str, coldef: str) -> None:
+    """Add a column to an existing table if it is missing (lightweight migration)."""
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    existing = [row["name"] for row in await cursor.fetchall()]
+    if column not in existing:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}")
+
+
 async def init_db() -> None:
-    """Create all tables if they do not yet exist."""
+    """Create all tables if they do not yet exist, and run small migrations."""
     _ensure_data_dir()
     db = await get_db()
     try:
@@ -90,6 +99,8 @@ async def init_db() -> None:
         await db.execute(CREATE_CHANGE_REQUESTS)
         await db.execute(CREATE_DOCUMENTS)
         await db.execute(CREATE_SCHEMES)
+        # Migrations for databases created before a column existed.
+        await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await db.commit()
     finally:
         await db.close()

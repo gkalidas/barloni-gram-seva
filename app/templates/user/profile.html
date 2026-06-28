@@ -49,8 +49,10 @@
                 {% else %}<span class="pill pill-red">Rejected</span>{% endif %}
             </td>
             <td>
-                {% if r.status == 'rejected' and r.rejection_reason %}
-                    Reason: {{ r.rejection_reason }}
+                {% if r.status == 'rejected' %}
+                    {% if r.rejection_reason %}Reason: {{ r.rejection_reason }}{% endif %}
+                    {% if r.required_documents %}{% if r.rejection_reason %}<br>{% endif %}Documents to provide: {{ r.required_documents | join(', ') }}{% endif %}
+                    {% if not r.rejection_reason and not r.required_documents %}—{% endif %}
                 {% elif r.status == 'approved' %}
                     Applied{% if r.reviewed_at %} on {{ r.reviewed_at }}{% endif %}.
                 {% elif r.status == 'pending' %}

@@ -162,6 +162,11 @@ def _parse_request(row) -> dict:
             req[field] = json.loads(raw) if raw else {}
         except (json.JSONDecodeError, TypeError):
             req[field] = {}
+    raw_docs = req.get("required_documents")
+    try:
+        req["required_documents"] = json.loads(raw_docs) if raw_docs else []
+    except (json.JSONDecodeError, TypeError):
+        req["required_documents"] = []
     return req
 
 
@@ -262,8 +267,9 @@ async def approve_change_request(request_id: int, admin_id: int) -> bool:
 
 
 async def reject_change_request(request_id: int, admin_id: int,
-                               reason: str) -> bool:
-    """Mark rejected, clear pending data, record reason and reviewer."""
+                               reason: str,
+                               required_documents: Optional[list] = None) -> bool:
+    """Mark rejected, clear pending data, record reason, requested docs, reviewer."""
     db = await get_db()
     try:
         cursor = await db.execute(
@@ -278,12 +284,14 @@ async def reject_change_request(request_id: int, admin_id: int,
                updated_at = datetime('now') WHERE id = ?""",
             (req["user_id"],),
         )
+        docs_json = json.dumps(required_documents) if required_documents else None
         await db.execute(
             """UPDATE profile_change_requests
-               SET status = 'rejected', rejection_reason = ?, reviewed_by = ?,
+               SET status = 'rejected', rejection_reason = ?,
+                   required_documents = ?, reviewed_by = ?,
                    reviewed_at = datetime('now')
                WHERE id = ?""",
-            (reason, admin_id, request_id),
+            (reason, docs_json, admin_id, request_id),
         )
         await db.commit()
         return True

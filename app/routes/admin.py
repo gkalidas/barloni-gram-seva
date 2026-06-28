@@ -98,13 +98,16 @@ async def review_change(request: Request, request_id: int):
     keys = sorted(
         set(change["old_values"].keys()) | set(change["new_values"].keys())
     )
-    return _templates(request).TemplateResponse(request, 
+    documents = await document_service.list_documents()
+    return _templates(request).TemplateResponse(
+        request,
         "admin/review_change.html",
         {
             "request": request,
             "user": user,
             "change": change,
             "keys": keys,
+            "documents": documents,
         },
     )
 
@@ -118,19 +121,21 @@ async def approve_change(request: Request, request_id: int):
 
 
 @router.post("/admin/change-requests/{request_id}/reject")
-async def reject_change(
-    request: Request,
-    request_id: int,
-    rejection_reason: str = Form(...),
-):
+async def reject_change(request: Request, request_id: int):
     admin = await require_admin(request)
-    reason = rejection_reason.strip()
-    if not reason:
+    form = await request.form()
+    reason = (form.get("rejection_reason") or "").strip()
+    required_documents = [d.strip() for d in form.getlist("required_documents") if d.strip()]
+    # Allow rejecting with a reason, a list of required documents, or both.
+    if not reason and not required_documents:
         return RedirectResponse(
-            f"/admin/change-requests/{request_id}?msg=Rejection+reason+is+required",
+            f"/admin/change-requests/{request_id}"
+            "?msg=Give+a+reason+or+select+required+documents",
             status_code=303,
         )
-    ok = await user_service.reject_change_request(request_id, admin["id"], reason)
+    ok = await user_service.reject_change_request(
+        request_id, admin["id"], reason, required_documents,
+    )
     msg = "Change+request+rejected" if ok else "Request+not+found+or+already+reviewed"
     return RedirectResponse(f"/admin/change-requests?msg={msg}", status_code=303)
 
