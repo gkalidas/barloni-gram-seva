@@ -80,12 +80,51 @@ Each village can customise its instance via `.env`:
   open the app at `http://<this-computer-ip>:8000`.
 - `SECRET_KEY` — auto-generated on first run by `start.py`; keep it private.
 
+## Production deployment (internet-facing)
+
+`start.py` is for **local / LAN** use. To serve the app on the **public
+internet**, use **`serve-prod.sh`**, which runs uvicorn with the right flags and
+refuses to start with insecure defaults.
+
+```bash
+# 1. One-time setup (creates .venv, installs deps)
+python3 start.py --setup-only
+
+# 2. Lock down .env (serve-prod.sh will refuse to start otherwise)
+echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env   # or edit the existing line
+#   set a strong ADMIN_PASSWORD=...
+#   set SESSION_COOKIE_SECURE=true   (once you're behind HTTPS)
+
+# 3. Launch
+./serve-prod.sh
+```
+
+`serve-prod.sh` will:
+
+- run behind a reverse proxy with `--proxy-headers` so per-IP rate limiting sees
+  real clients (set `FORWARDED_ALLOW_IPS` to your proxy's IP; default
+  `127.0.0.1`),
+- **refuse to start** while `SECRET_KEY` / `ADMIN_PASSWORD` are still defaults,
+- hide the server version header, and stay **single-worker** (rate limiting is
+  in-process; keep `WORKERS=1` until you move it to a shared store like Redis).
+
+Put a TLS-terminating reverse proxy (nginx / Caddy) in front of it and point it
+at `HOST:PORT`. Security-relevant `.env` knobs:
+
+- `SESSION_COOKIE_SECURE` — set `true` behind HTTPS so the session cookie is
+  TLS-only (keep `false` for local http dev).
+- `WORKERS`, `FORWARDED_ALLOW_IPS` — read by `serve-prod.sh` (see above).
+
+See **`ENHANCEMENTS.md` → "Before Production"** for the full go-live checklist
+(strong creds, HTTPS, PII backups of the DB and `data/uploads/`, monitoring).
+
 ## Project structure
 
 ```
 barloni-gram-seva/
-├── start.py                # One-click setup + launcher (recommended)
+├── start.py                # One-click setup + launcher (local/dev)
 ├── start.sh / start.bat    # Double-click wrappers (macOS-Linux / Windows)
+├── serve-prod.sh           # Production launcher (internet-facing)
 ├── run.py                  # Dev entry point (uvicorn runner, auto-reload)
 ├── app/
 │   ├── main.py             # FastAPI app, middleware, startup
