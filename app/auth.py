@@ -3,13 +3,14 @@ from typing import Optional
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
+import bcrypt
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-from passlib.context import CryptContext
 
 from app.config import settings
 from app.database import get_db
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt operates on at most 72 bytes; longer inputs must be truncated.
+_BCRYPT_MAX_BYTES = 72
 _serializer = URLSafeTimedSerializer(settings.SECRET_KEY, salt="session")
 
 
@@ -27,13 +28,15 @@ class AdminForbidden(Exception):
 # Password helpers ----------------------------------------------------------
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    pw = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+    return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     try:
-        return pwd_context.verify(password, password_hash)
-    except ValueError:
+        pw = password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+        return bcrypt.checkpw(pw, password_hash.encode("utf-8"))
+    except (ValueError, TypeError):
         return False
 
 

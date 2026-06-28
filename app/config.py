@@ -12,6 +12,10 @@ class Settings:
     ADMIN_MOBILE: str = os.getenv("ADMIN_MOBILE", "9999999999")
     DATABASE_PATH: str = os.getenv("DATABASE_PATH", "data/gramseva.db")
 
+    # Server
+    HOST: str = os.getenv("HOST", "127.0.0.1")
+    PORT: int = int(os.getenv("PORT", "8000"))
+
     # Session cookie config
     SESSION_COOKIE_NAME: str = "session"
     SESSION_MAX_AGE: int = 60 * 60 * 24  # 24 hours in seconds
