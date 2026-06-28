@@ -73,6 +73,19 @@ async def get_scheme(scheme_id: int) -> Optional[dict]:
     return _parse_scheme(row) if row else None
 
 
+async def get_scheme_by_name(name: str) -> Optional[dict]:
+    """Look up a scheme by exact name (case-insensitive), for import dedupe."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM schemes WHERE name = ? COLLATE NOCASE", (name,)
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    return _parse_scheme(row) if row else None
+
+
 async def count_schemes() -> int:
     db = await get_db()
     try:

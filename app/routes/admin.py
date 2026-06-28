@@ -1,11 +1,13 @@
 """Admin routes: dashboard, change request review, scheme & user management."""
 import json
 
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import APIRouter, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
 from app.auth import require_admin
-from app.services import user_service, scheme_service, document_service
+from app.services import (
+    user_service, scheme_service, document_service, import_export_service,
+)
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
 )
@@ -345,3 +347,79 @@ async def add_document_route(request: Request, name: str = Form(...)):
         return JSONResponse({"ok": False, "error": "Document name is required."},
                             status_code=400)
     return JSONResponse({"ok": True, "id": doc["id"], "name": doc["name"]})
+
+
+# --- Bulk import / export (CSV) -------------------------------------------
+
+def _csv_download(content: str, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/admin/data", response_class=HTMLResponse)
+async def data_page(request: Request):
+    user = await require_admin(request)
+    return await _render_data(request, user, None)
+
+
+async def _render_data(request, user, result):
+    return _templates(request).TemplateResponse(
+        request,
+        "admin/data.html",
+        {
+            "request": request,
+            "user": user,
+            "user_count": await user_service.count_users(),
+            "scheme_count": await scheme_service.count_schemes(),
+            "result": result,
+        },
+    )
+
+
+@router.post("/admin/import/users", response_class=HTMLResponse)
+async def import_users_route(request: Request, file: UploadFile = File(...)):
+    user = await require_admin(request)
+    raw = await file.read()
+    if not raw:
+        return await _render_data(request, user, {"kind": "users", "error": "No file uploaded."})
+    summary = await import_export_service.import_users(raw)
+    summary["kind"] = "users"
+    return await _render_data(request, user, summary)
+
+
+@router.post("/admin/import/schemes", response_class=HTMLResponse)
+async def import_schemes_route(request: Request, file: UploadFile = File(...)):
+    user = await require_admin(request)
+    raw = await file.read()
+    if not raw:
+        return await _render_data(request, user, {"kind": "schemes", "error": "No file uploaded."})
+    summary = await import_export_service.import_schemes(raw)
+    summary["kind"] = "schemes"
+    return await _render_data(request, user, summary)
+
+
+@router.get("/admin/export/users.csv")
+async def export_users_route(request: Request):
+    await require_admin(request)
+    return _csv_download(await import_export_service.export_users_csv(), "users.csv")
+
+
+@router.get("/admin/export/schemes.csv")
+async def export_schemes_route(request: Request):
+    await require_admin(request)
+    return _csv_download(await import_export_service.export_schemes_csv(), "schemes.csv")
+
+
+@router.get("/admin/template/users.csv")
+async def template_users_route(request: Request):
+    await require_admin(request)
+    return _csv_download(import_export_service.user_template_csv(), "users-template.csv")
+
+
+@router.get("/admin/template/schemes.csv")
+async def template_schemes_route(request: Request):
+    await require_admin(request)
+    return _csv_download(import_export_service.scheme_template_csv(), "schemes-template.csv")

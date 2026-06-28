@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Import / Export — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Back to admin</a></p>
+<h1>Import / Export Data</h1>
+<p class="muted">Bulk-create users and schemes from a CSV (spreadsheet) file, or download your current data.</p>
+
+{% if result %}
+    {% if result.error %}
+    <div class="flash flash-error">{{ result.error }}</div>
+    {% else %}
+    <div class="flash flash-success">
+        <strong>{{ result.kind | title }} import complete.</strong>
+        Added {{ result.added }}, skipped {{ result.skipped }} (already existed){% if result.errors %}, {{ result.errors | length }} row error(s){% endif %}.
+    </div>
+    {% if result.errors %}
+    <div class="card">
+        <h3>Rows that could not be imported</h3>
+        <div class="table-wrap">
+        <table>
+            <thead><tr><th>Row</th><th>Reason</th></tr></thead>
+            <tbody>
+            {% for rownum, reason in result.errors %}
+            <tr><td>{{ rownum }}</td><td>{{ reason }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+{% endif %}
+
+<div class="grid grid-2">
+    <div class="card">
+        <h3>Users <span class="pill pill-gray">{{ user_count }}</span></h3>
+        <p class="muted">Each row is one user account plus their full profile, so imported users are matched to schemes immediately.</p>
+        <form method="post" action="/admin/import/users" enctype="multipart/form-data">
+            <div class="field">
+                <label for="users_file">Import users (CSV)</label>
+                <input type="file" id="users_file" name="file" accept=".csv,text/csv" required>
+            </div>
+            <button class="btn btn-block" type="submit">Import users</button>
+        </form>
+        <div class="inline-actions" style="margin-top:0.8rem">
+            <a class="btn btn-sm btn-outline" href="/admin/export/users.csv">Export users</a>
+            <a class="btn btn-sm btn-outline" href="/admin/template/users.csv">Download template</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Schemes <span class="pill pill-gray">{{ scheme_count }}</span></h3>
+        <p class="muted">Eligibility rule columns accept multiple values separated by <code>;</code> (e.g. <code>sc;st;obc</code>). Same for the documents column.</p>
+        <form method="post" action="/admin/import/schemes" enctype="multipart/form-data">
+            <div class="field">
+                <label for="schemes_file">Import schemes (CSV)</label>
+                <input type="file" id="schemes_file" name="file" accept=".csv,text/csv" required>
+            </div>
+            <button class="btn btn-block" type="submit">Import schemes</button>
+        </form>
+        <div class="inline-actions" style="margin-top:0.8rem">
+            <a class="btn btn-sm btn-outline" href="/admin/export/schemes.csv">Export schemes</a>
+            <a class="btn btn-sm btn-outline" href="/admin/template/schemes.csv">Download template</a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>How it works</h3>
+    <ul class="clean">
+        <li><strong>Skip existing:</strong> a user row matching an existing mobile or username is skipped; a scheme row matching an existing name is skipped. No duplicates are created.</li>
+        <li><strong>Passwords:</strong> set each new user's password in the <code>password</code> column. (Exports leave it blank — fill it in before re-importing to a new instance.)</li>
+        <li><strong>Yes/No columns</strong> (BPL card, disability, bank, etc.) accept <code>true</code>/<code>false</code> (or yes/no, 1/0).</li>
+        <li>Start from a <strong>template</strong> above to see every column and an example row.</li>
+    </ul>
+</div>
+{% endblock %}
