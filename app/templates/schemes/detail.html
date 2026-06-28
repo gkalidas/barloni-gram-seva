@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ scheme.name }} — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<p><a href="/schemes">&larr; Back to schemes</a></p>
+<h1>{{ scheme.name }}</h1>
+{% if scheme.name_hi %}<p class="muted" style="font-size:1.1rem">{{ scheme.name_hi }}</p>{% endif %}
+
+<div class="meta" style="margin-bottom:1rem">
+    {% if scheme.ministry %}{{ scheme.ministry }} &middot; {% endif %}
+    <span class="pill pill-gray">{{ (scheme.category or 'other').replace('_',' ').title() }}</span>
+    {% if scheme.status == 'active' %}<span class="pill pill-green">Active</span>
+    {% elif scheme.status == 'upcoming' %}<span class="pill pill-orange">Upcoming</span>
+    {% else %}<span class="pill pill-red">Closed</span>{% endif %}
+</div>
+
+{% if scheme.objective %}
+<div class="card"><strong>Objective</strong><p>{{ scheme.objective }}</p></div>
+{% endif %}
+
+{% if scheme.benefits %}
+<div class="detail-row"><div class="k">Benefits</div><div class="v">{{ scheme.benefits }}</div></div>
+{% endif %}
+
+{% if scheme.documents_required %}
+<div class="detail-row">
+    <div class="k">Documents required</div>
+    <div class="v"><ul class="clean">{% for d in scheme.documents_required %}<li>{{ d }}</li>{% endfor %}</ul></div>
+</div>
+{% endif %}
+
+{% if scheme.how_to_apply %}
+<div class="detail-row"><div class="k">How to apply</div><div class="v">{{ scheme.how_to_apply }}</div></div>
+{% endif %}
+
+{% if scheme.application_deadline %}
+<div class="detail-row"><div class="k">Application deadline</div><div class="v">{{ scheme.application_deadline }}</div></div>
+{% endif %}
+
+{% if scheme.eligibility_rules %}
+<div class="detail-row">
+    <div class="k">Who is eligible</div>
+    <div class="v">
+        <ul class="clean">
+        {% set r = scheme.eligibility_rules %}
+        {% if r.min_age or r.max_age %}<li>Age: {{ r.min_age or 'any' }} – {{ r.max_age or 'any' }} years</li>{% endif %}
+        {% if r.gender %}<li>Gender: {{ r.gender | join(', ') }}</li>{% endif %}
+        {% if r.caste_category %}<li>Caste category: {{ r.caste_category | join(', ') | upper }}</li>{% endif %}
+        {% if r.max_income %}<li>Annual family income up to ₹{{ '{:,}'.format(r.max_income) }}</li>{% endif %}
+        {% if r.bpl_card_required %}<li>BPL card required</li>{% endif %}
+        {% if r.occupation %}<li>Occupation: {{ r.occupation | join(', ') | replace('_',' ') }}</li>{% endif %}
+        {% if r.land_ownership %}<li>Land ownership: {{ r.land_ownership | join(', ') }}</li>{% endif %}
+        {% if r.has_disability %}<li>For persons with disability</li>{% endif %}
+        {% if r.bank_account_required %}<li>Aadhaar-linked bank account required</li>{% endif %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top:1.2rem">
+    {% if user %}
+        <a class="btn btn-green" href="/my-schemes">Check my eligibility</a>
+    {% else %}
+        <a class="btn" href="/signup">Sign up to check eligibility</a>
+    {% endif %}
+</div>
+{% endblock %}

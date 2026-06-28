@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Admin Dashboard</h1>
+
+<div class="stats" style="margin-bottom:1.2rem">
+    <a class="stat orange" href="/admin/change-requests" style="text-decoration:none">
+        <span class="num">{{ pending_count }}</span>
+        <span class="lbl">Pending change requests</span>
+    </a>
+    <a class="stat" href="/admin/users" style="text-decoration:none">
+        <span class="num">{{ user_count }}</span>
+        <span class="lbl">Total users</span>
+    </a>
+    <a class="stat green" href="/admin/schemes" style="text-decoration:none">
+        <span class="num">{{ scheme_count }}</span>
+        <span class="lbl">Total schemes</span>
+    </a>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h3>Change requests</h3>
+        <p class="muted">Review and approve/reject profile change requests from users.</p>
+        <a class="btn" href="/admin/change-requests">Review requests</a>
+    </div>
+    <div class="card">
+        <h3>Schemes</h3>
+        <p class="muted">Add new schemes or edit existing ones.</p>
+        <div class="inline-actions">
+            <a class="btn" href="/admin/schemes">Manage schemes</a>
+            <a class="btn btn-outline" href="/admin/schemes/add">Add scheme</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

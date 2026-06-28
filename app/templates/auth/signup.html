@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Sign up — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Create your account</h1>
+<div class="card">
+    <form method="post" action="/signup" novalidate>
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="{{ username or '' }}" minlength="3" required autofocus>
+            <span class="hint">At least 3 characters.</span>
+        </div>
+        <div class="field">
+            <label for="mobile">Mobile number</label>
+            <input type="tel" id="mobile" name="mobile" value="{{ mobile or '' }}" pattern="\d{10}" maxlength="10" required>
+            <span class="hint">10 digits, no spaces.</span>
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" minlength="6" required>
+            <span class="hint">At least 6 characters.</span>
+        </div>
+        <div class="field">
+            <label for="confirm_password">Confirm password</label>
+            <input type="password" id="confirm_password" name="confirm_password" minlength="6" required>
+        </div>
+        <button class="btn btn-block" type="submit">Sign up</button>
+    </form>
+</div>
+<p class="text-center">Already have an account? <a href="/login">Login</a></p>
+{% endblock %}

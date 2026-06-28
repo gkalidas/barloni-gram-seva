@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Manage Schemes — Admin{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem">
+    <h1 style="margin:0">Schemes ({{ schemes|length }})</h1>
+    <a class="btn" href="/admin/schemes/add">+ Add scheme</a>
+</div>
+
+<div class="table-wrap" style="margin-top:1rem">
+<table>
+    <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for s in schemes %}
+    <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.name }}{% if s.ministry %}<br><span class="muted">{{ s.ministry }}</span>{% endif %}</td>
+        <td>{{ (s.category or 'other').replace('_',' ').title() }}</td>
+        <td>
+            {% if s.status == 'active' %}<span class="pill pill-green">Active</span>
+            {% elif s.status == 'upcoming' %}<span class="pill pill-orange">Upcoming</span>
+            {% else %}<span class="pill pill-red">Closed</span>{% endif %}
+        </td>
+        <td class="inline-actions">
+            <a class="btn btn-sm btn-outline" href="/schemes/{{ s.id }}">View</a>
+            <a class="btn btn-sm" href="/admin/schemes/{{ s.id }}/edit">Edit</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

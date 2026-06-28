@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}My Profile — {{ village_name }} {{ app_name }}{% endblock %}
+{% macro yn(v) %}{{ 'Yes' if v else 'No' }}{% endmacro %}
+{% block content %}
+<h1>My Profile</h1>
+
+{% if not profile %}
+<div class="card">
+    <p>You haven't filled your profile yet.</p>
+    <a class="btn btn-green" href="/profile/edit">Fill profile</a>
+</div>
+{% else %}
+{% if has_pending %}
+<div class="flash flash-info">A change request is pending admin approval. The values below are your current (active) profile.</div>
+{% endif %}
+<div class="card">
+    <div class="detail-row"><div class="k">Full name</div><div class="v">{{ profile.full_name }}</div></div>
+    <div class="detail-row"><div class="k">Date of birth</div><div class="v">{{ profile.date_of_birth }} (age {{ profile.age }})</div></div>
+    <div class="detail-row"><div class="k">Gender</div><div class="v">{{ profile.gender | title }}</div></div>
+    <div class="detail-row"><div class="k">Location</div><div class="v">{{ profile.village }}, {{ profile.district }}, {{ profile.state }}</div></div>
+    <div class="detail-row"><div class="k">Caste category</div><div class="v">{{ profile.caste_category | upper }}</div></div>
+    <div class="detail-row"><div class="k">BPL card</div><div class="v">{{ yn(profile.bpl_card) }}</div></div>
+    <div class="detail-row"><div class="k">Annual family income</div><div class="v">₹{{ '{:,.0f}'.format(profile.annual_family_income or 0) }}</div></div>
+    <div class="detail-row"><div class="k">Occupation</div><div class="v">{{ (profile.occupation or '') | replace('_',' ') | title }}</div></div>
+    <div class="detail-row"><div class="k">Land ownership</div><div class="v">{{ (profile.land_ownership or '') | title }}{% if profile.land_area_acres %} ({{ profile.land_area_acres }} acres){% endif %}</div></div>
+    <div class="detail-row"><div class="k">Family size</div><div class="v">{{ profile.family_size }}</div></div>
+    <div class="detail-row"><div class="k">Has disability</div><div class="v">{{ yn(profile.has_disability) }}</div></div>
+    <div class="detail-row"><div class="k">Aadhaar-linked bank account</div><div class="v">{{ yn(profile.bank_account_aadhaar_linked) }}</div></div>
+</div>
+<div class="inline-actions">
+    <a class="btn" href="/profile/edit">Edit profile</a>
+    <a class="btn btn-outline" href="/my-schemes">My schemes</a>
+</div>
+{% endif %}
+{% endblock %}

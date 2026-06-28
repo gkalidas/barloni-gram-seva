@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Hello, {{ user.username }}</h1>
+
+<div class="stats" style="margin-bottom:1.2rem">
+    <div class="stat green">
+        <span class="num">{{ eligible_count }}</span>
+        <span class="lbl">Schemes you qualify for</span>
+    </div>
+    <div class="stat">
+        <span class="num">{{ '✓' if profile_submitted else '–' }}</span>
+        <span class="lbl">Profile {{ 'submitted' if profile_submitted else 'not submitted' }}</span>
+    </div>
+    <div class="stat orange">
+        <span class="num">{{ '1' if has_pending else '0' }}</span>
+        <span class="lbl">Pending change request</span>
+    </div>
+</div>
+
+{% if not profile_submitted %}
+<div class="card">
+    <h3>Complete your profile</h3>
+    <p>Fill your one-time profile so we can match you with government schemes.</p>
+    <a class="btn btn-green" href="/profile/edit">Fill profile</a>
+</div>
+{% else %}
+<div class="card">
+    <h3>Your schemes</h3>
+    <p>You currently qualify for <strong>{{ eligible_count }}</strong> scheme(s) based on your profile.</p>
+    <div class="inline-actions">
+        <a class="btn btn-green" href="/my-schemes">View eligible schemes</a>
+        <a class="btn btn-outline" href="/profile">View profile</a>
+    </div>
+</div>
+{% if has_pending %}
+<div class="flash flash-info">You have a profile change request awaiting admin approval. Your current profile stays active until it is reviewed.</div>
+{% endif %}
+{% endif %}
+{% endblock %}

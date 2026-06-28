@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Login — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Login</h1>
+<div class="card">
+    <form method="post" action="/login" novalidate>
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="{{ username or '' }}" required autofocus>
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button class="btn btn-block" type="submit">Login</button>
+    </form>
+</div>
+<p class="text-center">New here? <a href="/signup">Create an account</a></p>
+{% endblock %}

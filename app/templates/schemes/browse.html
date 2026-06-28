@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Schemes — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Government Schemes</h1>
+
+<form class="search-bar" method="get" action="/schemes">
+    <div class="field" style="margin:0">
+        <label for="q">Search</label>
+        <input type="text" id="q" name="q" value="{{ q }}" placeholder="Search by name, ministry…">
+    </div>
+    <div class="field" style="margin:0">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+            <option value="">All categories</option>
+            {% for c in categories %}
+                <option value="{{ c }}" {% if c == category %}selected{% endif %}>{{ c.replace('_', ' ').title() }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field" style="margin:0">
+        <button class="btn btn-block" type="submit">Search</button>
+    </div>
+</form>
+
+{% if schemes %}
+    <p class="muted">{{ schemes|length }} scheme(s) found.</p>
+    <div class="scheme-list">
+        {% for s in schemes %}
+        <div class="scheme-card" data-scheme-card data-search="{{ s.name }} {{ s.ministry }} {{ s.category }}">
+            <h3>{{ s.name }}</h3>
+            <div class="meta">
+                {% if s.ministry %}{{ s.ministry }} &middot; {% endif %}
+                <span class="pill pill-gray">{{ (s.category or 'other').replace('_',' ').title() }}</span>
+            </div>
+            <div class="obj">{{ s.objective or '' }}</div>
+            <div class="foot">
+                <a class="btn btn-sm" href="/schemes/{{ s.id }}">View details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card text-center">
+        <p>No schemes found{% if q or category %} for your search{% endif %}.</p>
+        {% if q or category %}<a class="btn btn-outline" href="/schemes">Clear filters</a>{% endif %}
+    </div>
+{% endif %}
+{% endblock %}

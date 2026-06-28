@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>{{ 'Fill your profile' if first_time else 'Edit profile' }}</h1>
+
+{% if first_time %}
+<p class="muted">This is a one-time profile. After you submit, any future changes will need admin approval.</p>
+{% else %}
+<div class="flash flash-info">Editing your profile creates a change request. An admin must approve it before your profile updates. Your current profile stays active meanwhile.</div>
+{% endif %}
+
+{% if has_pending and not first_time %}
+<div class="flash flash-error">You already have a pending change request. Please wait for it to be reviewed before submitting another.</div>
+{% endif %}
+
+<div class="card">
+<form method="post" action="/profile/edit" novalidate>
+    <div class="field">
+        <label for="full_name">Full name</label>
+        <input type="text" id="full_name" name="full_name" value="{{ profile.full_name or '' }}" required>
+    </div>
+    <div class="field">
+        <label for="date_of_birth">Date of birth</label>
+        <input type="date" id="date_of_birth" name="date_of_birth" value="{{ profile.date_of_birth or '' }}" required>
+    </div>
+    <div class="field">
+        <label for="gender">Gender</label>
+        <select id="gender" name="gender" required>
+            <option value="">Select…</option>
+            {% for g in genders %}
+            <option value="{{ g }}" {% if profile.gender == g %}selected{% endif %}>{{ g | title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="grid grid-2">
+        <div class="field">
+            <label for="state">State</label>
+            <input type="text" id="state" name="state" value="{{ profile.state or '' }}" required>
+        </div>
+        <div class="field">
+            <label for="district">District</label>
+            <input type="text" id="district" name="district" value="{{ profile.district or '' }}" required>
+        </div>
+    </div>
+    <div class="field">
+        <label for="village">Village</label>
+        <input type="text" id="village" name="village" value="{{ profile.village or village_name }}" required>
+    </div>
+    <div class="field">
+        <label for="caste_category">Caste category</label>
+        <select id="caste_category" name="caste_category" required>
+            <option value="">Select…</option>
+            {% for c in caste_categories %}
+            <option value="{{ c }}" {% if (profile.caste_category or '') | lower == c %}selected{% endif %}>{{ c | upper }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field checkbox-field">
+        <input type="checkbox" id="bpl_card" name="bpl_card" {% if profile.bpl_card %}checked{% endif %}>
+        <label for="bpl_card">I have a BPL (Below Poverty Line) card</label>
+    </div>
+    <div class="field">
+        <label for="annual_family_income">Annual family income (₹)</label>
+        <input type="number" id="annual_family_income" name="annual_family_income" min="0" step="1000" value="{{ profile.annual_family_income if profile.annual_family_income is not none else '' }}" required>
+    </div>
+    <div class="field">
+        <label for="occupation">Occupation</label>
+        <select id="occupation" name="occupation" required>
+            <option value="">Select…</option>
+            {% for o in occupations %}
+            <option value="{{ o }}" {% if profile.occupation == o %}selected{% endif %}>{{ o | replace('_',' ') | title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label for="land_ownership">Land ownership</label>
+        <select id="land_ownership" name="land_ownership" required>
+            <option value="">Select…</option>
+            {% for l in land_ownership_options %}
+            <option value="{{ l }}" {% if profile.land_ownership == l %}selected{% endif %}>{{ l | title }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">marginal &lt; 2.5 acres · small 2.5–5 acres · large &gt; 5 acres</span>
+    </div>
+    <div class="field" id="landAreaField">
+        <label for="land_area_acres">Land area (acres)</label>
+        <input type="number" id="land_area_acres" name="land_area_acres" min="0" step="0.1" value="{{ profile.land_area_acres if profile.land_area_acres is not none else '' }}">
+        <span class="hint">Optional.</span>
+    </div>
+    <div class="field">
+        <label for="family_size">Family size</label>
+        <input type="number" id="family_size" name="family_size" min="1" value="{{ profile.family_size or '' }}" required>
+    </div>
+    <div class="field checkbox-field">
+        <input type="checkbox" id="has_disability" name="has_disability" {% if profile.has_disability %}checked{% endif %}>
+        <label for="has_disability">A family member has a disability</label>
+    </div>
+    <div class="field checkbox-field">
+        <input type="checkbox" id="bank_account_aadhaar_linked" name="bank_account_aadhaar_linked" {% if profile.bank_account_aadhaar_linked %}checked{% endif %}>
+        <label for="bank_account_aadhaar_linked">I have an Aadhaar-linked bank account</label>
+    </div>
+
+    <button class="btn btn-green btn-block" type="submit">
+        {{ 'Submit profile' if first_time else 'Submit change request' }}
+    </button>
+</form>
+</div>
+<p class="text-center"><a href="/dashboard">Cancel</a></p>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if scheme and scheme.id else 'Add' }} Scheme — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin/schemes">&larr; Back to schemes</a></p>
+<h1>{{ 'Edit Scheme' if scheme and scheme.id else 'Add Scheme' }}</h1>
+
+<div class="card">
+<form method="post" action="{{ action }}" novalidate>
+    <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="{{ scheme.name if scheme else '' }}" required>
+    </div>
+    <div class="grid grid-2">
+        <div class="field">
+            <label for="name_hi">Name (Hindi)</label>
+            <input type="text" id="name_hi" name="name_hi" value="{{ scheme.name_hi if scheme else '' }}">
+        </div>
+        <div class="field">
+            <label for="ministry">Ministry / Department</label>
+            <input type="text" id="ministry" name="ministry" value="{{ scheme.ministry if scheme else '' }}">
+        </div>
+    </div>
+    <div class="grid grid-2">
+        <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category">
+                <option value="">Select…</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if scheme and scheme.category == c %}selected{% endif %}>{{ c.replace('_',' ').title() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                {% for st in statuses %}
+                <option value="{{ st }}" {% if scheme and scheme.status == st %}selected{% endif %}>{{ st.title() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="field">
+        <label for="objective">Objective</label>
+        <input type="text" id="objective" name="objective" value="{{ scheme.objective if scheme else '' }}">
+    </div>
+    <div class="field">
+        <label for="benefits">Benefits</label>
+        <textarea id="benefits" name="benefits">{{ scheme.benefits if scheme else '' }}</textarea>
+    </div>
+    <div class="field">
+        <label for="how_to_apply">How to apply</label>
+        <textarea id="how_to_apply" name="how_to_apply">{{ scheme.how_to_apply if scheme else '' }}</textarea>
+    </div>
+    <div class="field">
+        <label for="application_deadline">Application deadline</label>
+        <input type="text" id="application_deadline" name="application_deadline" value="{{ scheme.application_deadline if scheme else '' }}" placeholder="e.g. ongoing or 2025-12-31">
+    </div>
+    <div class="field">
+        <label for="eligibility_rules">Eligibility rules (JSON object)</label>
+        <textarea id="eligibility_rules" name="eligibility_rules" placeholder='{"min_age": 18, "max_income": 250000}'>{{ scheme.eligibility_rules if scheme else '' }}</textarea>
+        <span class="hint">Keys: min_age, max_age, gender, caste_category, max_income, bpl_card_required, occupation, land_ownership, has_disability, bank_account_required. Use null or omit for no restriction.</span>
+    </div>
+    <div class="field">
+        <label for="documents_required">Documents required (JSON array)</label>
+        <textarea id="documents_required" name="documents_required" placeholder='["Aadhaar card", "Bank passbook"]'>{{ scheme.documents_required if scheme else '' }}</textarea>
+    </div>
+    <div class="field">
+        <label for="scheme_data">Additional data (JSON object, optional)</label>
+        <textarea id="scheme_data" name="scheme_data">{{ scheme.scheme_data if scheme else '' }}</textarea>
+    </div>
+    <button class="btn btn-green btn-block" type="submit">{{ 'Save changes' if scheme and scheme.id else 'Add scheme' }}</button>
+</form>
+</div>
+{% endblock %}

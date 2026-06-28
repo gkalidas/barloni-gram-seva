@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Change Requests — Admin{% endblock %}
+{% block content %}
+<h1>Profile Change Requests</h1>
+
+<div class="inline-actions" style="margin-bottom:1rem">
+    <a class="btn btn-sm {{ '' if status=='pending' else 'btn-outline' }}" href="/admin/change-requests?status=pending">Pending</a>
+    <a class="btn btn-sm {{ '' if status=='approved' else 'btn-outline' }}" href="/admin/change-requests?status=approved">Approved</a>
+    <a class="btn btn-sm {{ '' if status=='rejected' else 'btn-outline' }}" href="/admin/change-requests?status=rejected">Rejected</a>
+    <a class="btn btn-sm {{ '' if status=='all' else 'btn-outline' }}" href="/admin/change-requests?status=all">All</a>
+</div>
+
+{% if requests %}
+<div class="table-wrap">
+<table>
+    <thead><tr><th>#</th><th>User</th><th>Requested</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for r in requests %}
+    <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.username }}<br><span class="muted">{{ r.mobile }}</span></td>
+        <td>{{ r.requested_at }}</td>
+        <td>
+            {% if r.status == 'pending' %}<span class="pill pill-orange">Pending</span>
+            {% elif r.status == 'approved' %}<span class="pill pill-green">Approved</span>
+            {% else %}<span class="pill pill-red">Rejected</span>{% endif %}
+        </td>
+        <td><a class="btn btn-sm" href="/admin/change-requests/{{ r.id }}">Review</a></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card text-center"><p>No {{ status if status != 'all' else '' }} change requests.</p></div>
+{% endif %}
+{% endblock %}

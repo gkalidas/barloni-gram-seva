@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin{% endblock %}
+{% block content %}
+<h1>Users ({{ users|length }})</h1>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>#</th><th>Username</th><th>Mobile</th><th>Role</th><th>Profile</th><th>Joined</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.username }}</td>
+        <td>{{ u.mobile }}</td>
+        <td>
+            {% if u.role == 'admin' %}<span class="pill pill-orange">Admin</span>
+            {% else %}<span class="pill pill-gray">User</span>{% endif %}
+        </td>
+        <td>
+            {% if u.profile_submitted %}<span class="pill pill-green">Submitted</span>
+            {% else %}<span class="pill pill-gray">Pending</span>{% endif %}
+        </td>
+        <td>{{ u.created_at }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

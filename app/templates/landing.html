@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ village_name }} {{ app_name }} — Home{% endblock %}
+{% block content %}
+<section class="hero">
+    <h1>Welcome to {{ village_name }} {{ app_name }}</h1>
+    <p>Your village civic platform. Find government schemes you qualify for, and raise civic issues.</p>
+</section>
+
+<div class="big-actions">
+    <a class="big-btn btn-green" href="/schemes">
+        Get Information
+        <span class="sub">Browse &amp; search government schemes</span>
+    </a>
+    <a class="big-btn disabled" href="#" onclick="return false;" aria-disabled="true">
+        Raise a Complaint <span class="badge">Coming Soon</span>
+        <span class="sub">Report water, electricity, roads &amp; more</span>
+    </a>
+</div>
+
+<div class="card">
+    <h3>Find schemes meant for you</h3>
+    <p class="muted">Create a free account and fill a one-time profile. We'll instantly show you every government scheme you are eligible for.</p>
+    {% if user %}
+        <a class="btn" href="/dashboard">Go to your dashboard</a>
+    {% else %}
+        <div class="inline-actions">
+            <a class="btn" href="/signup">Create account</a>
+            <a class="btn btn-outline" href="/login">Login</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

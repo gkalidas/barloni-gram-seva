@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}My Schemes — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Schemes you qualify for</h1>
+
+{% if not profile %}
+<div class="card">
+    <p>Fill your profile first to see schemes you are eligible for.</p>
+    <a class="btn btn-green" href="/profile/edit">Fill profile</a>
+</div>
+{% elif schemes %}
+<p class="muted">Based on your profile, you qualify for {{ schemes|length }} scheme(s).</p>
+<div class="scheme-list">
+    {% for s in schemes %}
+    <div class="scheme-card">
+        <h3>{{ s.name }}</h3>
+        <div class="meta">
+            {% if s.ministry %}{{ s.ministry }} &middot; {% endif %}
+            <span class="pill pill-green">Eligible</span>
+        </div>
+        <div class="obj">{{ s.objective or '' }}</div>
+        <div class="foot"><a class="btn btn-sm" href="/schemes/{{ s.id }}">View details</a></div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card text-center">
+    <p>Based on your current profile, we couldn't match you to any active scheme right now.</p>
+    <p class="muted">Schemes and eligibility change often — check back later, or browse all schemes.</p>
+    <a class="btn btn-outline" href="/schemes">Browse all schemes</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ village_name }} {{ app_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="/">
+            <span class="brand-mark">🏛️</span>
+            <span class="brand-text">{{ village_name }} <small>{{ app_name }}</small></span>
+        </a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+        <nav class="nav" id="nav">
+            <a href="/">Home</a>
+            <a href="/schemes">Schemes</a>
+            {% if user %}
+                <a href="/dashboard">Dashboard</a>
+                {% if user.role == 'admin' %}
+                    <a href="/admin">Admin</a>
+                {% endif %}
+                <a href="/logout" class="nav-cta">Logout</a>
+            {% else %}
+                <a href="/login" class="nav-cta">Login</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main class="content">
+    {% set flash_msg = request.query_params.get('msg') %}
+    {% if flash_msg %}
+        <div class="flash flash-success">{{ flash_msg }}</div>
+    {% endif %}
+    {% if flash %}
+        <div class="flash flash-{{ flash[0] }}">{{ flash[1] }}</div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+    <p>{{ village_name }} {{ app_name }} &middot; A village civic platform &middot; Built for the community</p>
+</footer>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>
