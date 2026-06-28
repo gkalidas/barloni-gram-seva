@@ -19,6 +19,23 @@ def _templates(request: Request):
     return request.app.state.templates
 
 
+def _safe_next(next_url: str) -> str:
+    """Only allow same-site relative paths, to prevent open-redirect attacks.
+
+    A value like ``//evil.com`` or ``/\\evil.com`` starts with ``/`` but is
+    treated by browsers as a protocol-relative URL to another host, so we
+    reject anything whose second character is a slash or backslash.
+    """
+    if (
+        next_url
+        and next_url.startswith("/")
+        and not next_url.startswith("//")
+        and not next_url.startswith("/\\")
+    ):
+        return next_url
+    return "/dashboard"
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, next: str = "/dashboard"):
     user = await get_current_user(request)
@@ -49,7 +66,7 @@ async def login_submit(
             },
             status_code=401,
         )
-    destination = next if next and next.startswith("/") else "/dashboard"
+    destination = _safe_next(next)
     response = RedirectResponse(destination, status_code=303)
     set_session_cookie(response, user["id"], user["role"])
     return response

@@ -43,6 +43,25 @@ def _bool_out(value) -> str:
     return "true" if value else "false"
 
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value) -> str:
+    """Neutralize spreadsheet formula injection in exported text cells.
+
+    A value such as ``=HYPERLINK(...)`` or ``+SUM(...)`` is executed as a
+    formula when the CSV is opened in Excel / LibreOffice. Prefixing the cell
+    with a single quote makes the spreadsheet treat it as plain text. Applied
+    only to free-text fields (not to numbers we render ourselves).
+    """
+    if value is None:
+        return ""
+    s = str(value)
+    if s and s[0] in _FORMULA_PREFIXES:
+        return "'" + s
+    return s
+
+
 def _num_out(value) -> str:
     """Render a number for export without a trailing '.0' on whole values."""
     if value is None or value == "":
@@ -314,16 +333,16 @@ async def export_users_csv() -> str:
             except (json.JSONDecodeError, TypeError):
                 profile = {}
         writer.writerow({
-            "username": u["username"],
-            "mobile": u["mobile"],
+            "username": _csv_safe(u["username"]),
+            "mobile": _csv_safe(u["mobile"]),
             "password": "",  # never export password hashes
             "role": u["role"],
-            "full_name": profile.get("full_name", ""),
+            "full_name": _csv_safe(profile.get("full_name", "")),
             "date_of_birth": profile.get("date_of_birth", ""),
             "gender": profile.get("gender", ""),
-            "state": profile.get("state", ""),
-            "district": profile.get("district", ""),
-            "village": profile.get("village", ""),
+            "state": _csv_safe(profile.get("state", "")),
+            "district": _csv_safe(profile.get("district", "")),
+            "village": _csv_safe(profile.get("village", "")),
             "caste_category": (profile.get("caste_category", "") or "").lower(),
             "bpl_card": _bool_out(profile.get("bpl_card")) if profile else "",
             "annual_family_income": _num_out(profile.get("annual_family_income")),
@@ -347,14 +366,14 @@ async def export_schemes_csv() -> str:
         rules = s.get("eligibility_rules") or {}
         docs = s.get("documents_required") or []
         writer.writerow({
-            "name": s.get("name", ""),
-            "name_hi": s.get("name_hi", "") or "",
-            "ministry": s.get("ministry", "") or "",
+            "name": _csv_safe(s.get("name", "")),
+            "name_hi": _csv_safe(s.get("name_hi", "") or ""),
+            "ministry": _csv_safe(s.get("ministry", "") or ""),
             "category": s.get("category", "") or "",
-            "objective": s.get("objective", "") or "",
-            "benefits": s.get("benefits", "") or "",
-            "how_to_apply": s.get("how_to_apply", "") or "",
-            "application_deadline": s.get("application_deadline", "") or "",
+            "objective": _csv_safe(s.get("objective", "") or ""),
+            "benefits": _csv_safe(s.get("benefits", "") or ""),
+            "how_to_apply": _csv_safe(s.get("how_to_apply", "") or ""),
+            "application_deadline": _csv_safe(s.get("application_deadline", "") or ""),
             "status": s.get("status", "active") or "active",
             "min_age": rules.get("min_age", ""),
             "max_age": rules.get("max_age", ""),
