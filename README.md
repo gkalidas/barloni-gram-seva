@@ -118,6 +118,22 @@ at `HOST:PORT`. Security-relevant `.env` knobs:
 See **`ENHANCEMENTS.md` → "Before Production"** for the full go-live checklist
 (strong creds, HTTPS, PII backups of the DB and `data/uploads/`, monitoring).
 
+## Tests
+
+An automated end-to-end regression suite drives the real app against a
+throwaway database (your real data is never touched):
+
+```bash
+pip install -r requirements-dev.txt     # one-time (httpx + pytest)
+python tests/run_tests.py               # one command, runs everything
+# or: pytest tests/
+```
+
+It covers security/access control, the document locker, the change-request
+workflow, CSV import/export, eligibility matching, admin scheme management, and
+the internet-exposure hardening. See `tests/README.md` for details and
+`TESTING.md` for the manual checklist (a few items can only be checked by hand).
+
 ## Project structure
 
 ```
@@ -136,6 +152,8 @@ barloni-gram-seva/
 │   ├── templates/          # Jinja2 templates
 │   └── static/             # CSS and JS
 ├── seed_schemes.py         # Seed sample schemes
+├── tests/                  # Automated regression suite (run_tests.py / pytest)
+├── requirements-dev.txt    # Test dependencies (httpx, pytest)
 └── data/                   # SQLite DB lives here (gitignored)
 ```
 
