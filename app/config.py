@@ -23,6 +23,13 @@ class Settings:
     # Session cookie config
     SESSION_COOKIE_NAME: str = "session"
     SESSION_MAX_AGE: int = 60 * 60 * 24  # 24 hours in seconds
+    # Set true in production (HTTPS) so the session cookie is only sent over
+    # TLS. Leave false for local http:// development, or the cookie won't be
+    # sent and login will appear to silently fail.
+    SESSION_COOKIE_SECURE: bool = (
+        os.getenv("SESSION_COOKIE_SECURE", "false").strip().lower()
+        in ("true", "1", "yes", "on")
+    )
 
     # Village branding (white-label)
     VILLAGE_NAME: str = os.getenv("VILLAGE_NAME", "Barloni")

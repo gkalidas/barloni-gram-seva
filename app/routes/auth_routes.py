@@ -10,6 +10,10 @@ from app.auth import (
     set_session_cookie,
     clear_session_cookie,
 )
+from app.rate_limit import (
+    login_is_blocked, login_record_failure, login_reset,
+    signup_attempts, client_ip,
+)
 from app.services import user_service
 
 router = APIRouter()
@@ -53,9 +57,27 @@ async def login_submit(
     password: str = Form(...),
     next: str = Form("/dashboard"),
 ):
+    ip = client_ip(request)
+    wait = login_is_blocked(ip, username)
+    if wait:
+        return _templates(request).TemplateResponse(request,
+            "auth/login.html",
+            {
+                "request": request,
+                "user": None,
+                "next": next,
+                "flash": ("error",
+                          "Too many failed attempts. Please try again in "
+                          f"about {max(1, wait // 60)} minute(s)."),
+                "username": username,
+            },
+            status_code=429,
+        )
+
     user = await user_service.get_user_by_username(username.strip())
     if user is None or not verify_password(password, user["password_hash"]):
-        return _templates(request).TemplateResponse(request, 
+        login_record_failure(ip, username)
+        return _templates(request).TemplateResponse(request,
             "auth/login.html",
             {
                 "request": request,
@@ -66,6 +88,7 @@ async def login_submit(
             },
             status_code=401,
         )
+    login_reset(ip, username)
     destination = _safe_next(next)
     response = RedirectResponse(destination, status_code=303)
     set_session_cookie(response, user["id"], user["role"])
@@ -90,6 +113,23 @@ async def signup_submit(
     password: str = Form(...),
     confirm_password: str = Form(...),
 ):
+    ip = client_ip(request)
+    if signup_attempts.is_blocked(ip):
+        wait = signup_attempts.retry_after(ip)
+        return _templates(request).TemplateResponse(request,
+            "auth/signup.html",
+            {
+                "request": request,
+                "user": None,
+                "flash": ("error",
+                          "Too many sign-up attempts from this network. Please "
+                          f"try again in about {max(1, wait // 60)} minute(s)."),
+                "username": username,
+                "mobile": mobile,
+            },
+            status_code=429,
+        )
+
     username = username.strip()
     mobile = mobile.strip()
     errors = []
@@ -123,6 +163,7 @@ async def signup_submit(
         )
 
     user_id = await user_service.create_user(username, mobile, password, "user")
+    signup_attempts.record(ip)
     response = RedirectResponse("/dashboard", status_code=303)
     set_session_cookie(response, user_id, "user")
     return response

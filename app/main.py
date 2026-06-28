@@ -65,8 +65,50 @@ async def load_seed_users() -> None:
         print(f"[startup] Could not load users from {csv_path}: {exc}")
 
 
+def warn_on_insecure_defaults() -> None:
+    """Loudly flag dangerous defaults — important for an internet deployment."""
+    warnings = []
+    if settings.ADMIN_PASSWORD == "admin123":
+        warnings.append("ADMIN_PASSWORD is still the default 'admin123'.")
+    if settings.SECRET_KEY == "change-this-to-a-random-string":
+        warnings.append("SECRET_KEY is still the default value (sessions are forgeable).")
+    if not settings.SESSION_COOKIE_SECURE:
+        warnings.append(
+            "SESSION_COOKIE_SECURE is off — set it true behind HTTPS in production."
+        )
+    if warnings:
+        print("\n" + "!" * 64)
+        print("  SECURITY WARNING — fix before exposing this app to the internet:")
+        for w in warnings:
+            print(f"    - {w}")
+        print("!" * 64 + "\n")
+
+
+# Headers applied to every response to harden against common web attacks.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'"
+    ),
+}
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="barloni-gram-seva")
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        response = await call_next(request)
+        for header, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(header, value)
+        return response
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -87,6 +129,7 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup():
+        warn_on_insecure_defaults()
         await init_db()
         await ensure_default_admin()
         # Seed the master document catalogue and sample schemes on first run
