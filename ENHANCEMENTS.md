@@ -1,5 +1,23 @@
 # BARLONI-GRAM-SEVA — Long-term Enhancements & Roadmap
 
+## Before Production (internet-facing deployment) — TODO
+This app will be exposed to the public internet. `serve-prod.sh` runs it with
+the right uvicorn flags and refuses to start with default credentials, but the
+following still need a human:
+- [ ] Set a strong `ADMIN_PASSWORD` and a random `SECRET_KEY` in `.env`
+      (`openssl rand -hex 32`). `serve-prod.sh` will refuse to start otherwise.
+- [ ] Put a TLS-terminating reverse proxy (nginx / Caddy) in front, then set
+      `SESSION_COOKIE_SECURE=true` in `.env`.
+- [ ] Set `FORWARDED_ALLOW_IPS` to the proxy's IP so `--proxy-headers` is
+      trusted only from it (default `127.0.0.1` for a same-host proxy).
+- [ ] Keep `WORKERS=1` until rate limiting is moved to a shared store (Redis);
+      with multiple workers each keeps its own in-process counters.
+- [ ] Set up automated backups of the SQLite DB and the `data/uploads/` files
+      (these hold PII — Aadhaar scans etc.).
+- [ ] Decide on a log-rotation / monitoring story for the server.
+- [ ] (Recommended) add CAPTCHA on signup and password-strength rules — see
+      Security Enhancements below.
+
 ## Phase 2 — Complaints Module
 - [ ] Complaint categories: water, electricity, garbage, roads, drainage, common/other
 - [ ] Complaint form: category, description, ward/area, optional photo upload
@@ -41,11 +59,15 @@
 - [ ] Notification when new schemes match a user's profile
 
 ## Security Enhancements
-- [ ] Rate limiting on login/signup
+- [x] Rate limiting on login/signup (per-account + per-IP; in-process)
+- [x] Account lockout after failed attempts (8/account, 40/IP per 5 min)
+- [x] Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy)
+- [x] Secure session cookie flag (`SESSION_COOKIE_SECURE`, HttpOnly, SameSite)
+- [x] CSV formula-injection neutralised on export; open-redirect on login fixed
 - [ ] CAPTCHA for signup
 - [ ] Password strength requirements
-- [ ] Account lockout after failed attempts
-- [ ] HTTPS enforcement
+- [ ] HTTPS enforcement / HSTS (currently terminated at the reverse proxy)
+- [ ] Move rate-limit + session store to Redis when scaling past one worker
 
 ## Data Migration
 - [ ] SQLite → PostgreSQL migration script
