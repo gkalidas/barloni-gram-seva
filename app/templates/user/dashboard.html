@@ -33,8 +33,14 @@
         <a class="btn btn-outline" href="/profile">View profile</a>
     </div>
 </div>
-{% if has_pending %}
+{% if latest_request and latest_request.status == 'pending' %}
 <div class="flash flash-info">You have a profile change request awaiting admin approval. Your current profile stays active until it is reviewed.</div>
+{% elif latest_request and latest_request.status == 'rejected' %}
+<div class="flash flash-error">
+    Your recent profile change request was <strong>rejected</strong>{% if latest_request.reviewed_at %} on {{ latest_request.reviewed_at }}{% endif %}.
+    {% if latest_request.rejection_reason %}<br>Reason: {{ latest_request.rejection_reason }}{% endif %}
+    <br><a href="/profile/edit">Edit your profile to try again</a> &middot; <a href="/profile">see request history</a>
+</div>
 {% endif %}
 {% endif %}
 {% endblock %}

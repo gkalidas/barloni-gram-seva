@@ -118,7 +118,8 @@ async def dashboard(request: Request):
             eligibility_service.matching_schemes(profile, schemes)
         )
     pending = await user_service.has_pending_request(user["id"])
-    return _templates(request).TemplateResponse(request, 
+    latest_request = await user_service.latest_change_request(user["id"])
+    return _templates(request).TemplateResponse(request,
         "user/dashboard.html",
         {
             "request": request,
@@ -127,6 +128,7 @@ async def dashboard(request: Request):
             "profile_submitted": bool(user.get("profile_submitted")),
             "eligible_count": eligible_count,
             "has_pending": pending,
+            "latest_request": latest_request,
         },
     )
 
@@ -136,7 +138,7 @@ async def view_profile(request: Request):
     user = await require_user(request)
     profile = user_service.get_profile(user)
     pending_profile = user_service.get_pending_profile(user)
-    return _templates(request).TemplateResponse(request, 
+    return _templates(request).TemplateResponse(request,
         "user/profile.html",
         {
             "request": request,
@@ -144,6 +146,7 @@ async def view_profile(request: Request):
             "profile": profile,
             "pending_profile": pending_profile,
             "has_pending": await user_service.has_pending_request(user["id"]),
+            "change_requests": await user_service.list_user_change_requests(user["id"]),
         },
     )
 

@@ -31,5 +31,38 @@
     <a class="btn" href="/profile/edit">Edit profile</a>
     <a class="btn btn-outline" href="/my-schemes">My schemes</a>
 </div>
+
+{% if change_requests %}
+<div class="card" style="margin-top:1.2rem">
+    <h3>Your change requests</h3>
+    <p class="muted">Edits to your profile are reviewed by an admin. Here is what happened to each request.</p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Requested</th><th>Status</th><th>Details</th></tr></thead>
+        <tbody>
+        {% for r in change_requests %}
+        <tr>
+            <td>{{ r.requested_at }}</td>
+            <td>
+                {% if r.status == 'pending' %}<span class="pill pill-orange">Pending</span>
+                {% elif r.status == 'approved' %}<span class="pill pill-green">Approved</span>
+                {% else %}<span class="pill pill-red">Rejected</span>{% endif %}
+            </td>
+            <td>
+                {% if r.status == 'rejected' and r.rejection_reason %}
+                    Reason: {{ r.rejection_reason }}
+                {% elif r.status == 'approved' %}
+                    Applied{% if r.reviewed_at %} on {{ r.reviewed_at }}{% endif %}.
+                {% elif r.status == 'pending' %}
+                    Awaiting review.
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
 {% endif %}
 {% endblock %}

@@ -199,6 +199,26 @@ async def get_change_request(request_id: int) -> Optional[dict]:
     return _parse_request(row) if row else None
 
 
+async def list_user_change_requests(user_id: int) -> list:
+    """All change requests for one user, newest first (for the user's own view)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT * FROM profile_change_requests
+               WHERE user_id = ? ORDER BY requested_at DESC, id DESC""",
+            (user_id,),
+        )
+        rows = await cursor.fetchall()
+    finally:
+        await db.close()
+    return [_parse_request(r) for r in rows]
+
+
+async def latest_change_request(user_id: int) -> Optional[dict]:
+    requests = await list_user_change_requests(user_id)
+    return requests[0] if requests else None
+
+
 async def count_pending_requests() -> int:
     db = await get_db()
     try:
