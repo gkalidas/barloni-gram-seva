@@ -19,6 +19,16 @@
             <span class="pill pill-green">Eligible</span>
         </div>
         <div class="obj">{{ s.objective or '' }}</div>
+        {% if s.docs_total %}
+        <div class="meta" style="margin-top:0.5rem">
+            {% if s.docs_missing %}
+                <span class="pill pill-orange">Documents {{ s.docs_have }}/{{ s.docs_total }} ready</span>
+                <span class="muted"> — need: {{ s.docs_missing | join(', ') }}</span>
+            {% else %}
+                <span class="pill pill-green">All {{ s.docs_total }} documents ready</span>
+            {% endif %}
+        </div>
+        {% endif %}
         <div class="foot"><a class="btn btn-sm" href="/schemes/{{ s.id }}">View details</a></div>
     </div>
     {% endfor %}

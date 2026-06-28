@@ -24,7 +24,26 @@
 {% if scheme.documents_required %}
 <div class="detail-row">
     <div class="k">Documents required</div>
-    <div class="v"><ul class="clean">{% for d in scheme.documents_required %}<li>{{ d }}</li>{% endfor %}</ul></div>
+    <div class="v">
+        <ul class="clean">
+        {% for d in scheme.documents_required %}
+            <li>{{ d }}
+                {% if approved_docs is not none %}
+                    {% if d in approved_docs %}<span class="pill pill-green">You have this</span>
+                    {% else %}<span class="pill pill-orange">Not uploaded</span>{% endif %}
+                {% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+        {% if approved_docs is not none %}
+            {% set missing = scheme.documents_required | reject('in', approved_docs) | list %}
+            {% if missing %}
+            <p class="muted" style="margin-top:0.5rem">You still need to upload: <strong>{{ missing | join(', ') }}</strong>. <a href="/documents">Go to My Documents</a></p>
+            {% else %}
+            <p class="pill pill-green" style="margin-top:0.5rem">You have all required documents ready.</p>
+            {% endif %}
+        {% endif %}
+    </div>
 </div>
 {% endif %}
 

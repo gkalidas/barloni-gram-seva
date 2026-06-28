@@ -230,6 +230,12 @@ async def my_schemes(request: Request):
     if profile:
         schemes = await scheme_service.list_schemes(only_active=True)
         eligible = eligibility_service.matching_schemes(profile, schemes)
+        approved = await user_document_service.approved_document_names(user["id"])
+        for scheme in eligible:
+            required = scheme.get("documents_required") or []
+            scheme["docs_total"] = len(required)
+            scheme["docs_have"] = sum(1 for d in required if d in approved)
+            scheme["docs_missing"] = [d for d in required if d not in approved]
     return _templates(request).TemplateResponse(request,
         "user/eligibility.html",
         {

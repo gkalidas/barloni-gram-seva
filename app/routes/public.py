@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import get_current_user
-from app.services import scheme_service
+from app.services import scheme_service, user_document_service
 
 router = APIRouter()
 
@@ -57,7 +57,16 @@ async def scheme_detail(request: Request, scheme_id: int):
             },
             status_code=404,
         )
-    return _templates(request).TemplateResponse(request, 
+    # For a logged-in non-admin user, show which required documents they have.
+    approved_docs = None
+    if user and user.get("role") != "admin":
+        approved_docs = await user_document_service.approved_document_names(user["id"])
+    return _templates(request).TemplateResponse(request,
         "schemes/detail.html",
-        {"request": request, "user": user, "scheme": scheme},
+        {
+            "request": request,
+            "user": user,
+            "scheme": scheme,
+            "approved_docs": approved_docs,
+        },
     )

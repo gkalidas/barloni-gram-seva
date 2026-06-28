@@ -64,3 +64,22 @@ async def seed_documents() -> None:
         await db.commit()
     finally:
         await db.close()
+
+
+async def sync_scheme_documents() -> None:
+    """Ensure every document any scheme requires exists in the master list.
+
+    Runs on startup so that a document a scheme asks for is always selectable
+    in a user's locker (and therefore matchable), regardless of whether the
+    scheme was seeded, imported, or added by hand.
+    """
+    from app.services import scheme_service  # local import avoids any cycle
+
+    schemes = await scheme_service.list_schemes(only_active=False)
+    names = set()
+    for scheme in schemes:
+        for doc in (scheme.get("documents_required") or []):
+            if doc and doc.strip():
+                names.add(doc.strip())
+    for name in names:
+        await add_document(name)

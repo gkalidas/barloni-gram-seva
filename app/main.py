@@ -69,6 +69,9 @@ def create_app() -> FastAPI:
         await document_service.seed_documents()
         from seed_schemes import seed
         await seed()
+        # Make sure every document a scheme requires is in the master list,
+        # so users can always upload it from their locker.
+        await document_service.sync_scheme_documents()
 
     # Exception handlers for auth dependencies
     @app.exception_handler(AuthRedirect)
