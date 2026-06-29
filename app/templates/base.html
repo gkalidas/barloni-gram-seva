@@ -21,24 +21,30 @@
         </a>
         <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
         <nav class="nav" id="nav">
-            <a href="/">Home</a>
-            <a href="/schemes">Schemes</a>
-            <a href="/complaints">Complaints</a>
-            <a href="/officials">Officials</a>
-            <a href="/help">Help</a>
+            <a href="/">{{ t('nav_home') }}</a>
+            <a href="/schemes">{{ t('nav_schemes') }}</a>
+            <a href="/complaints">{{ t('nav_complaints') }}</a>
+            <a href="/officials">{{ t('nav_officials') }}</a>
+            <a href="/help">{{ t('nav_help') }}</a>
             {% if user %}
-                <a href="/dashboard">Dashboard</a>
+                <a href="/dashboard">{{ t('nav_dashboard') }}</a>
                 {% if user.role not in ['admin', 'superadmin'] %}
-                    <a href="/documents">Documents</a>
+                    <a href="/documents">{{ t('nav_documents') }}</a>
                 {% endif %}
                 {% if user.role in ['admin', 'superadmin'] %}
-                    <a href="/admin">Admin</a>
+                    <a href="/admin">{{ t('nav_admin') }}</a>
                 {% endif %}
-                <a href="/account">Account</a>
-                <a href="/logout" class="nav-cta">Logout</a>
+                <a href="/account">{{ t('nav_account') }}</a>
+                <a href="/logout" class="nav-cta">{{ t('nav_logout') }}</a>
             {% else %}
-                <a href="/login" class="nav-cta">Login</a>
+                <a href="/login" class="nav-cta">{{ t('nav_login') }}</a>
             {% endif %}
+            <span class="nav-lang" aria-label="{{ t('language') }}">
+                {% for code, label in languages.items() %}
+                <a href="/lang/{{ code }}?next={{ request.url.path }}"
+                   class="{{ 'active' if code == lang else '' }}">{{ label }}</a>{% if not loop.last %} · {% endif %}
+                {% endfor %}
+            </span>
         </nav>
     </div>
 </header>

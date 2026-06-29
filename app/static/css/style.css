@@ -352,3 +352,12 @@ fieldset.rules legend {
     padding-top: 0.9rem;
     border-top: 1px dashed var(--border, #d8dee4);
 }
+
+/* ---- Language switcher (top bar) ---- */
+.nav-lang {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    white-space: nowrap;
+}
+.nav-lang a { text-decoration: none; }
+.nav-lang a.active { font-weight: 700; text-decoration: underline; }

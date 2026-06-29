@@ -54,10 +54,10 @@ following still need a human:
 - [x] Approval engine — Phase 2 (content edits + initiator notice): scheme add/edit and official add/edit/remove now route through the approval engine; the initiating admin sees a one-time in-app "approved/rejected" notice on their dashboard. (Deferred: CSV-import gating, and folding the resident change-request/document/complaint flows into the same engine — those already have their own review UI and unifying them is a larger refactor.)
 
 ## Multi-language Support
-- [ ] Hindi (primary)
-- [ ] Marathi
-- [ ] Language toggle in UI
-- [ ] Store scheme data in multiple languages (name_hi, name_mr, objective_hi, etc.)
+- [x] Hindi (primary) — UI chrome (navigation, language switch) translated; framework in `app/i18n.py`, language remembered in a `lang` cookie
+- [ ] Marathi — framework ready (add `"mr"` to `SUPPORTED` + strings); not yet translated
+- [x] Language toggle in UI — switcher in the top bar (`/lang/{code}`)
+- [~] Store scheme data in multiple languages — `name_hi` shown when Hindi is active; remaining fields (objective_hi, benefits_hi, name_mr…) still to add
 
 ## Offline / Low-bandwidth Mode
 - [x] PWA (Progressive Web App) with service worker for offline access — `/manifest.webmanifest`, `/sw.js` (root scope), `/offline`; installable, themed from branding config

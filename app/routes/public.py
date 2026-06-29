@@ -2,14 +2,35 @@
 import os
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, FileResponse, Response
+from fastapi.responses import HTMLResponse, FileResponse, Response, RedirectResponse
 
+from app import i18n
 from app.auth import get_current_user, is_admin
+from app.config import settings
 from app.services import (
     scheme_service, user_document_service, eligibility_service, complaint_service,
 )
 
 router = APIRouter()
+
+
+def _safe_path(next_url: str) -> str:
+    """Same-site relative path only (mirrors the login open-redirect guard)."""
+    if (next_url and next_url.startswith("/")
+            and not next_url.startswith("//") and not next_url.startswith("/\\")):
+        return next_url
+    return "/"
+
+
+@router.get("/lang/{code}")
+async def set_language(request: Request, code: str, next: str = "/"):
+    """Remember the chosen UI language in a cookie, then return where we were."""
+    response = RedirectResponse(_safe_path(next), status_code=303)
+    response.set_cookie(
+        "lang", i18n.normalize(code),
+        max_age=60 * 60 * 24 * 365, httponly=False, samesite="lax",
+        secure=settings.SESSION_COOKIE_SECURE)
+    return response
 
 
 def _templates(request: Request):

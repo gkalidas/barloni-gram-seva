@@ -14,7 +14,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+def _i18n_context(request: Request) -> dict:
+    """Inject the active language and a translator into every template render."""
+    from app import i18n
+    lang = i18n.normalize(request.cookies.get("lang"))
+    return {
+        "lang": lang,
+        "t": lambda key: i18n.t(key, lang),
+        "languages": i18n.SUPPORTED,
+    }
+
+
+templates = Jinja2Templates(directory=TEMPLATES_DIR, context_processors=[_i18n_context])
 
 
 async def ensure_default_admin() -> None:

@@ -27,7 +27,7 @@
     <div class="scheme-list">
         {% for s in schemes %}
         <div class="scheme-card" data-scheme-card data-search="{{ s.name }} {{ s.ministry }} {{ s.category }}">
-            <h3>{{ s.name }}</h3>
+            <h3>{% if lang == 'hi' and s.name_hi %}{{ s.name_hi }}{% else %}{{ s.name }}{% endif %}</h3>
             <div class="meta">
                 {% if s.ministry %}{{ s.ministry }} &middot; {% endif %}
                 <span class="pill pill-gray">{{ (s.category or 'other').replace('_',' ').title() }}</span>

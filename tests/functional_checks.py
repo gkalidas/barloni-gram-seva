@@ -91,6 +91,17 @@ def run():
         section("B. Public area (no login)")
         anon = TestClient(app)
         check("landing loads", anon.get("/").status_code == 200)
+        # i18n: switching to Hindi translates the nav; invalid codes fall back.
+        lang_client = TestClient(app)
+        lr = lang_client.get("/lang/hi?next=/", follow_redirects=False)
+        check("language switch sets cookie + redirects",
+              lr.status_code == 303 and "lang=hi" in lr.headers.get("set-cookie", ""))
+        check("nav renders in Hindi after switch", "योजनाएँ" in lang_client.get("/").text)
+        lang_client.get("/lang/zz?next=/", follow_redirects=False)
+        check("invalid language falls back to English", "योजनाएँ" not in lang_client.get("/").text)
+        check("PWA manifest + service worker served",
+              anon.get("/manifest.webmanifest").status_code == 200
+              and anon.get("/sw.js").status_code == 200)
         r = anon.get("/schemes")
         check("browse schemes loads + lists", r.status_code == 200 and "PM-KISAN" in r.text)
         r = anon.get("/schemes", params={"q": "MGNREGA"})
