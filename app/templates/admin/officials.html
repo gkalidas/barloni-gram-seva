@@ -10,6 +10,27 @@
     </div>
 </div>
 
+{% if import_result %}
+<div class="flash flash-{{ 'error' if import_result.error else 'success' }}">
+    {% if import_result.error %}{{ import_result.error }}
+    {% else %}Imported {{ import_result.added }} official(s), skipped {{ import_result.skipped }}.{% if import_result.errors %} {{ import_result.errors|length }} row error(s).{% endif %}{% endif %}
+</div>
+{% if import_result.errors %}
+<ul class="muted">{% for rn, msg in import_result.errors %}<li>Row {{ rn }}: {{ msg }}</li>{% endfor %}</ul>
+{% endif %}
+{% endif %}
+
+<div class="card">
+    <div class="inline-actions" style="flex-wrap:wrap;gap:0.6rem;align-items:center">
+        <form method="post" action="/admin/officials/import" enctype="multipart/form-data" class="inline-actions">
+            <input type="file" name="file" accept=".csv" required>
+            <button class="btn btn-sm" type="submit">Import CSV</button>
+        </form>
+        <a class="btn btn-sm btn-outline" href="/admin/officials/export.csv">Export CSV</a>
+        <a class="btn btn-sm btn-outline" href="/admin/officials/template.csv">Template</a>
+    </div>
+</div>
+
 {% if officials %}
 <div class="table-wrap">
 <table>

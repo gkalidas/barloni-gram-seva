@@ -10,6 +10,7 @@ data/uploads/
 users.csv
 # Exported data files (generated artifacts)
 schemes.csv
+officials.csv
 # Editor lock files (LibreOffice/OpenOffice)
 .~lock.*#
 .venv/

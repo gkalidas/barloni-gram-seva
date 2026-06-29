@@ -9,8 +9,13 @@ import json
 import re
 from datetime import date, datetime
 
-from app.constants import GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP
-from app.services import user_service, scheme_service, document_service
+from app.constants import (
+    GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP, COMPLAINT_CATEGORIES,
+)
+from app.config import settings
+from app.services import (
+    user_service, scheme_service, document_service, officials_service,
+)
 
 # Column layouts. Export and the downloadable templates both use these, so an
 # exported file can be edited and imported straight back.
@@ -20,6 +25,11 @@ USER_COLUMNS = [
     "caste_category", "bpl_card", "annual_family_income", "occupation",
     "land_ownership", "land_area_acres", "family_size", "has_disability",
     "bank_account_aadhaar_linked",
+]
+
+OFFICIALS_COLUMNS = [
+    "name", "designation", "level", "ward", "department",
+    "phone", "email", "office_address", "office_hours",
 ]
 
 SCHEME_COLUMNS = [
@@ -316,6 +326,86 @@ async def import_schemes(raw_bytes: bytes) -> dict:
         summary["added"] += 1
 
     return summary
+
+
+# --- officials import / export ---------------------------------------------
+
+async def import_officials(raw_bytes: bytes) -> dict:
+    reader, get = _reader(raw_bytes)
+    summary = {"added": 0, "skipped": 0, "errors": []}
+    if not reader.fieldnames:
+        summary["errors"].append((0, "The file is empty or has no header row."))
+        return summary
+
+    rownum = 1
+    for row in reader:
+        rownum += 1
+        name = get(row, "name")
+        if not name and not any(row.values()):
+            continue
+        if not name:
+            summary["errors"].append((rownum, "name is required"))
+            continue
+        designation = get(row, "designation")
+        ward = get(row, "ward")
+        department = get(row, "department").lower()
+        if ward and ward not in settings.COMPLAINT_WARDS:
+            summary["errors"].append((rownum, f"invalid ward '{ward}'"))
+            continue
+        if department and department not in COMPLAINT_CATEGORIES:
+            summary["errors"].append((rownum, f"invalid department '{department}'"))
+            continue
+        if await officials_service.find_official(name, designation, ward):
+            summary["skipped"] += 1
+            continue
+        level = _to_int(get(row, "level")) or 2
+        await officials_service.create_official({
+            "name": name,
+            "designation": designation or None,
+            "level": max(1, level),
+            "ward": ward or None,
+            "department": department or None,
+            "phone": get(row, "phone") or None,
+            "email": get(row, "email") or None,
+            "photo_path": None,
+            "office_address": get(row, "office_address") or None,
+            "office_hours": get(row, "office_hours") or None,
+        })
+        summary["added"] += 1
+    return summary
+
+
+async def export_officials_csv() -> str:
+    officials = await officials_service.list_officials()
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=OFFICIALS_COLUMNS, extrasaction="ignore")
+    writer.writeheader()
+    for o in officials:
+        writer.writerow({
+            "name": _csv_safe(o.get("name", "")),
+            "designation": _csv_safe(o.get("designation") or ""),
+            "level": o.get("level") or "",
+            "ward": o.get("ward") or "",
+            "department": o.get("department") or "",
+            "phone": _csv_safe(o.get("phone") or ""),
+            "email": _csv_safe(o.get("email") or ""),
+            "office_address": _csv_safe(o.get("office_address") or ""),
+            "office_hours": _csv_safe(o.get("office_hours") or ""),
+        })
+    return out.getvalue()
+
+
+def officials_template_csv() -> str:
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=OFFICIALS_COLUMNS)
+    writer.writeheader()
+    writer.writerow({
+        "name": "Asha Devi", "designation": "Anganwadi Sevika", "level": "3",
+        "ward": "Ward 1", "department": "other", "phone": "9800000000",
+        "email": "", "office_address": "Anganwadi Centre, Ward 1",
+        "office_hours": "Mon–Sat, 9am–4pm",
+    })
+    return out.getvalue()
 
 
 # --- export ----------------------------------------------------------------

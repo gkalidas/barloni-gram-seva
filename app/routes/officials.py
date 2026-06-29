@@ -1,13 +1,13 @@
 """Responsible people directory: public hierarchy page + admin CRUD."""
 import os
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
 from app.auth import require_admin, get_current_user
 from app.config import settings
 from app.constants import COMPLAINT_CATEGORIES
-from app.services import officials_service, user_document_service
+from app.services import officials_service, user_document_service, import_export_service
 
 router = APIRouter()
 
@@ -96,13 +96,45 @@ async def _photo_from_form(form):
     return officials_service.save_photo(file.filename, content), None
 
 
-@router.get("/admin/officials", response_class=HTMLResponse)
-async def admin_officials(request: Request):
-    user = await require_admin(request)
+async def _render_officials(request, user, import_result=None):
     officials = await officials_service.list_officials()
     return _templates(request).TemplateResponse(request,
         "admin/officials.html",
-        {"request": request, "user": user, "officials": officials})
+        {"request": request, "user": user, "officials": officials,
+         "import_result": import_result})
+
+
+@router.get("/admin/officials", response_class=HTMLResponse)
+async def admin_officials(request: Request):
+    user = await require_admin(request)
+    return await _render_officials(request, user)
+
+
+def _csv_response(content: str, filename: str) -> Response:
+    return Response(content=content, media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@router.get("/admin/officials/export.csv")
+async def export_officials_route(request: Request):
+    await require_admin(request)
+    return _csv_response(await import_export_service.export_officials_csv(), "officials.csv")
+
+
+@router.get("/admin/officials/template.csv")
+async def template_officials_route(request: Request):
+    await require_admin(request)
+    return _csv_response(import_export_service.officials_template_csv(), "officials-template.csv")
+
+
+@router.post("/admin/officials/import", response_class=HTMLResponse)
+async def import_officials_route(request: Request, file: UploadFile = File(...)):
+    user = await require_admin(request)
+    raw = await file.read()
+    if not raw:
+        return await _render_officials(request, user, {"error": "No file uploaded."})
+    summary = await import_export_service.import_officials(raw)
+    return await _render_officials(request, user, summary)
 
 
 @router.get("/admin/officials/add", response_class=HTMLResponse)

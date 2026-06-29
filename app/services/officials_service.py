@@ -77,6 +77,23 @@ async def list_for(ward: Optional[str], department: Optional[str]) -> list:
     return [dict(r) for r in rows]
 
 
+async def find_official(name: str, designation: str, ward: str) -> Optional[dict]:
+    """Find an official by name + designation + ward (for CSV import dedupe)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT * FROM responsible_people
+               WHERE lower(name) = lower(?)
+                 AND lower(COALESCE(designation, '')) = lower(?)
+                 AND COALESCE(ward, '') = ?""",
+            (name, designation or "", ward or ""),
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    return dict(row) if row else None
+
+
 async def count_officials() -> int:
     db = await get_db()
     try:

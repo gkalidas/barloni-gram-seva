@@ -376,33 +376,63 @@ def run(base):
           'href="/complaints"' in home and "Coming Soon" not in home)
     check("public /officials page loads", anon.get("/officials").status_code == 200)
     check("Officials in nav", "/officials" in home)
+    # realistic starter officials are seeded on first run
+    pub0 = anon.get("/officials").text
+    check("seeded officials present (Sarpanch + Anganwadi Sevika)",
+          "Sarpanch" in pub0 and "Anganwadi Sevika" in pub0)
+
+    def official_id(html, name):
+        m = re.search(re.escape(name) + r".*?/admin/officials/(\d+)/edit", html, re.S)
+        return int(m.group(1)) if m else None
 
     # admin creates an official (Ward 2 / water) with a photo
+    oname = "E2E Ward2 Water Person"
     r = admin.post("/admin/officials/add",
-                   data={"name": "Asha Devi", "designation": "Ward 2 Member", "level": "2",
+                   data={"name": oname, "designation": "Ward 2 Member", "level": "3",
                          "ward": "Ward 2", "department": "water", "phone": "9812345678",
-                         "email": "asha@example.com", "office_address": "Panchayat Bhawan",
+                         "email": "e2e@example.com", "office_address": "Panchayat Bhawan",
                          "office_hours": "Mon-Sat 10-5"},
-                   files={"photo": ("asha.png", PNG, "image/png")})
+                   files={"photo": ("p.png", PNG, "image/png")})
     check("admin add official -> 303", r.status_code == 303)
     al = admin.get("/admin/officials").text
-    oid = first_int(r"/admin/officials/(\d+)/edit", al)
-    check("official in admin list", "Asha Devi" in al and oid is not None)
+    oid = official_id(al, oname)
+    check("official in admin list", oname in al and oid is not None)
     pub = anon.get("/officials").text
     check("official on public page with phone + email",
-          "Asha Devi" in pub and "9812345678" in pub and "asha@example.com" in pub)
+          oname in pub and "9812345678" in pub and "e2e@example.com" in pub)
     check("official photo served publicly",
           anon.get(f"/officials/{oid}/photo").status_code == 200)
     r = admin.post(f"/admin/officials/{oid}/edit",
-                   data={"name": "Asha Devi", "designation": "Senior Ward Member",
-                         "level": "2", "ward": "Ward 2", "department": "water",
-                         "phone": "9812345678", "email": "asha@example.com"})
+                   data={"name": oname, "designation": "Senior Ward Member",
+                         "level": "3", "ward": "Ward 2", "department": "water",
+                         "phone": "9812345678", "email": "e2e@example.com"})
     check("edit official -> 303", r.status_code == 303)
     check("edit persisted", "Senior Ward Member" in admin.get("/admin/officials").text)
 
-    # the earlier water/Ward 2 complaint now shows the responsible official
-    check("complaint detail shows responsible official",
-          "Asha Devi" in anon.get(f"/complaints/{cid}").text)
+    # the earlier water/Ward 2 complaint now shows responsible official(s)
+    check("complaint detail shows responsible official(s)",
+          oname in anon.get(f"/complaints/{cid}").text)
+
+    # officials CSV export / import / template
+    exp = admin.get("/admin/officials/export.csv")
+    check("officials export CSV includes data",
+          exp.status_code == 200 and oname in exp.text and "designation" in exp.text)
+    check("officials template downloads",
+          admin.get("/admin/officials/template.csv").status_code == 200)
+    imp_csv = ("name,designation,level,ward,department,phone,email,office_address,office_hours\n"
+               "CSV Imported Officer,Block Officer,2,,other,9700000000,csv@example.com,Block Office,Mon-Fri 10-5\n"
+               "Bad Ward Officer,Tester,3,Ward 99,,9700000001,,,\n")
+    s_off = admin.post("/admin/officials/import",
+                       files={"file": ("officials.csv", imp_csv.encode(), "text/csv")}).text
+    check("officials import added 1 + flagged bad ward",
+          "Imported 1 official" in s_off and "invalid ward" in s_off)
+    check("imported official appears on public page",
+          "CSV Imported Officer" in anon.get("/officials").text)
+    s_off2 = admin.post("/admin/officials/import",
+                        files={"file": ("officials.csv", imp_csv.encode(), "text/csv")}).text
+    check("officials re-import skips the duplicate", "skipped 1" in s_off2)
+    check("non-admin cannot export officials -> 403",
+          user.get("/admin/officials/export.csv").status_code == 403)
 
     # ward defaults from the filer's profile when left blank
     wu = new_client(base)

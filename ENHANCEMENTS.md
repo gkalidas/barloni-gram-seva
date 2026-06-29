@@ -29,6 +29,7 @@ following still need a human:
 - [x] Ward-level complaint analytics (totals, by category/ward/status, ward×category matrix, this-month)
 - [x] Notify the filer when their complaint status changes (in-app: dashboard banner + "Updated" badge)
 - [x] Officials / responsible-people directory: admin CRUD + public level-based hierarchy (`/officials`), linked to complaints by ward + department
+- [x] Officials CSV import/export + seeded starter directory (real Gram Panchayat roles: Sarpanch, Secretary/Gram Sevak, Patwari, ward members, Anganwadi Sevika, ASHA, ANM, service staff per department)
 - [x] Profile `ward_no` (+ surfaced mobile); complaint ward optional, defaulting to the profile ward
 - [x] Homepage "Raise a Complaint" CTA enabled
 - [ ] Email / SMS notification on status change (needs an external provider)

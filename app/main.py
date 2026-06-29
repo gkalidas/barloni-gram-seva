@@ -154,6 +154,9 @@ def create_app() -> FastAPI:
         await document_service.seed_documents()
         from seed_schemes import seed
         await seed()
+        # Seed a realistic starter list of village officials on first run.
+        from seed_officials import seed as seed_officials
+        await seed_officials()
         # Make sure every document a scheme requires is in the master list,
         # so users can always upload it from their locker.
         await document_service.sync_scheme_documents()
