@@ -68,6 +68,9 @@ async def scheme_detail(request: Request, scheme_id: int):
             },
             status_code=404,
         )
+    # Count a public view (skip admins so the metric reflects resident interest).
+    if not is_admin(user):
+        await scheme_service.increment_views(scheme_id)
     # Public source references (GR file + official links).
     sources = await scheme_service.list_sources(scheme_id)
     # For a logged-in non-admin user, show which required documents they have,

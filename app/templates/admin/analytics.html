@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Analytics — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1 style="margin:0">Analytics</h1>
+    <a class="btn btn-sm btn-outline" href="/admin">Back to dashboard</a>
+</div>
+
+{# ---- Sign-ups over time ---- #}
+<div class="card" style="margin-top:1rem">
+    <h3 style="margin-top:0">Resident sign-ups — last 30 days</h3>
+    <p class="muted">{{ signups.total }} resident account(s) in total.
+        {{ signups.counts | sum }} joined in this window.</p>
+    {% set peak = signups.counts | max %}
+    <div style="display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid #ddd;padding-top:0.5rem">
+        {% for c in signups.counts %}
+        <div title="{{ signups.labels[loop.index0] }}: {{ c }}"
+             style="flex:1;background:var(--green,#2e7d32);min-height:1px;border-radius:2px 2px 0 0;
+                    height:{{ ((c / peak) * 100) if peak else 0 }}%"></div>
+        {% endfor %}
+    </div>
+    <div class="muted" style="display:flex;justify-content:space-between;font-size:0.75rem;margin-top:0.25rem">
+        <span>{{ signups.labels[0] }}</span>
+        <span>{{ signups.labels[-1] }}</span>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    {# ---- Most-viewed schemes ---- #}
+    <div class="card">
+        <h3 style="margin-top:0">Most-viewed schemes</h3>
+        {% set top = most_viewed[0].views if most_viewed else 0 %}
+        {% if top %}
+        <table class="bar-table" style="width:100%;border-collapse:collapse">
+            {% for s in most_viewed %}
+            {% if s.views %}
+            <tr>
+                <td style="padding:0.25rem 0.5rem 0.25rem 0;white-space:nowrap;max-width:11rem;overflow:hidden;text-overflow:ellipsis">
+                    <a href="/schemes/{{ s.id }}">{{ s.name }}</a></td>
+                <td style="width:60%">
+                    <div style="background:var(--green,#2e7d32);height:14px;border-radius:3px;
+                                width:{{ (s.views / top) * 100 }}%;min-width:2px"></div>
+                </td>
+                <td class="muted" style="text-align:right;padding-left:0.5rem">{{ s.views }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="muted">No scheme views recorded yet.</p>
+        {% endif %}
+    </div>
+
+    {# ---- Eligibility spread ---- #}
+    <div class="card">
+        <h3 style="margin-top:0">How many schemes residents qualify for</h3>
+        <p class="muted">{{ distribution.profiles }} resident(s) with a completed profile.</p>
+        {% set b = distribution.buckets %}
+        {% set bmax = [b['0'], b['1-2'], b['3-5'], b['6+']] | max %}
+        <table style="width:100%;border-collapse:collapse">
+            {% for label, key in [('No schemes','0'), ('1–2 schemes','1-2'), ('3–5 schemes','3-5'), ('6+ schemes','6+')] %}
+            <tr>
+                <td style="padding:0.25rem 0.5rem 0.25rem 0;white-space:nowrap">{{ label }}</td>
+                <td style="width:60%">
+                    <div style="background:#1565c0;height:14px;border-radius:3px;
+                                width:{{ ((b[key] / bmax) * 100) if bmax else 0 }}%;min-width:2px"></div>
+                </td>
+                <td class="muted" style="text-align:right;padding-left:0.5rem">{{ b[key] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{# ---- Residents eligible per scheme ---- #}
+<div class="card">
+    <h3 style="margin-top:0">Residents eligible, by scheme</h3>
+    {% set emax = distribution.per_scheme[0].eligible if distribution.per_scheme else 0 %}
+    {% if distribution.per_scheme %}
+    <table style="width:100%;border-collapse:collapse">
+        {% for s in distribution.per_scheme %}
+        <tr>
+            <td style="padding:0.25rem 0.5rem 0.25rem 0">{{ s.name }}</td>
+            <td style="width:60%">
+                <div style="background:#2e7d32;height:14px;border-radius:3px;
+                            width:{{ ((s.eligible / emax) * 100) if emax else 0 }}%;min-width:2px"></div>
+            </td>
+            <td class="muted" style="text-align:right;padding-left:0.5rem">{{ s.eligible }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No active schemes yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

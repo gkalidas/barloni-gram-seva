@@ -43,7 +43,7 @@ following still need a human:
 - [ ] Auto-update mechanism: periodic re-scraping to catch scheme changes, new schemes, deadline updates
 
 ## Admin Enhancements
-- [ ] Admin dashboard analytics: user signups over time, most-viewed schemes, eligibility distribution
+- [x] Admin dashboard analytics: user signups over time, most-viewed schemes, eligibility distribution — `/admin/analytics`
 - [x] Bulk user import via CSV
 - [x] Export user data / reports
 - [x] Delete a scheme

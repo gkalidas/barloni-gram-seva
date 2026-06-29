@@ -98,6 +98,21 @@ async def get_scheme(scheme_id: int) -> Optional[dict]:
     return _parse_scheme(row) if row else None
 
 
+async def increment_views(scheme_id: int) -> None:
+    """Bump a scheme's public view counter (best-effort; never raises)."""
+    try:
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE schemes SET views = COALESCE(views, 0) + 1 WHERE id = ?",
+                (scheme_id,))
+            await db.commit()
+        finally:
+            await db.close()
+    except Exception:
+        pass
+
+
 async def get_scheme_by_name(name: str) -> Optional[dict]:
     """Look up a scheme by exact name (case-insensitive), for import dedupe."""
     db = await get_db()

@@ -9,6 +9,7 @@ from app.auth import require_admin, hash_password
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
     user_document_service, complaint_service, activity_service, approval_service,
+    analytics_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -74,6 +75,22 @@ async def admin_dashboard(request: Request):
             "scheme_count": await scheme_service.count_schemes(),
             "complaint_open_count": await complaint_service.count_open_complaints(),
             "approvals_pending": await approval_service.count_pending(),
+        },
+    )
+
+
+@router.get("/admin/analytics", response_class=HTMLResponse)
+async def analytics_page(request: Request):
+    user = await require_admin(request)
+    signups = await analytics_service.signups_over_time(30)
+    return _templates(request).TemplateResponse(request,
+        "admin/analytics.html",
+        {
+            "request": request,
+            "user": user,
+            "signups": signups,
+            "most_viewed": await analytics_service.most_viewed_schemes(10),
+            "distribution": await analytics_service.eligibility_distribution(),
         },
     )
 
