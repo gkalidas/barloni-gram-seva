@@ -10,7 +10,7 @@ from app.auth import require_user
 from app.config import settings
 from app.services import (
     user_service, scheme_service, eligibility_service,
-    document_service, user_document_service,
+    document_service, user_document_service, complaint_service,
 )
 from app.constants import GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP
 
@@ -125,6 +125,7 @@ async def dashboard(request: Request):
         )
     pending = await user_service.has_pending_request(user["id"])
     latest_request = await user_service.latest_change_request(user["id"])
+    complaint_updates = await complaint_service.count_unseen_for_user(user["id"])
     return _templates(request).TemplateResponse(request,
         "user/dashboard.html",
         {
@@ -135,6 +136,7 @@ async def dashboard(request: Request):
             "eligible_count": eligible_count,
             "has_pending": pending,
             "latest_request": latest_request,
+            "complaint_updates": complaint_updates,
         },
     )
 

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "complaints/_macros.html" import status_pill, label %}
+{% block title %}Complaint Analytics — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin/complaints">&larr; Back to complaints</a></p>
+<h1>Complaint Analytics</h1>
+
+<div class="stats" style="margin-bottom:1.2rem">
+    <div class="stat"><span class="num">{{ stats.total }}</span><span class="lbl">Total complaints</span></div>
+    <div class="stat orange"><span class="num">{{ stats.open }}</span><span class="lbl">Open</span></div>
+    <div class="stat green"><span class="num">{{ stats.resolved }}</span><span class="lbl">Resolved</span></div>
+    <div class="stat"><span class="num">{{ stats.this_month }}</span><span class="lbl">This month</span></div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <h3>By category</h3>
+        {% if stats.by_category %}
+        <table>
+            <tbody>
+            {% for r in stats.by_category %}
+            <tr><td>{{ label(r.category) }}</td><td style="text-align:right"><strong>{{ r.c }}</strong></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="muted">No data yet.</p>{% endif %}
+    </div>
+
+    <div class="card">
+        <h3>By ward / area</h3>
+        {% if stats.by_ward %}
+        <table>
+            <tbody>
+            {% for r in stats.by_ward %}
+            <tr><td>{{ r.ward }}</td><td style="text-align:right"><strong>{{ r.c }}</strong></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="muted">No data yet.</p>{% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h3>Ward × category</h3>
+    {% if wards %}
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Ward / area</th>{% for c in categories %}<th>{{ label(c) }}</th>{% endfor %}<th>Total</th></tr>
+        </thead>
+        <tbody>
+        {% for w in wards %}
+        <tr>
+            <td><strong>{{ w }}</strong></td>
+            {% set row = matrix[w] %}
+            {% for c in categories %}<td>{{ row.get(c, 0) }}</td>{% endfor %}
+            <td><strong>{{ row.values() | sum }}</strong></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}<p class="muted">No complaints yet.</p>{% endif %}
+</div>
+
+<div class="card">
+    <h3>By status</h3>
+    <div class="inline-actions" style="flex-wrap:wrap">
+        {% for r in stats.by_status %}
+        <span>{{ status_pill(r.status) }} <strong>{{ r.c }}</strong></span>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

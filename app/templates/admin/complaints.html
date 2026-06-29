@@ -3,7 +3,10 @@
 {% block title %}Complaints — Admin{% endblock %}
 {% block content %}
 <p><a href="/admin">&larr; Back to admin</a></p>
-<h1>Complaints</h1>
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1>Complaints</h1>
+    <a class="btn btn-outline" href="/admin/complaints/analytics">View analytics</a>
+</div>
 
 <form method="get" class="card" style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end">
     <div class="field" style="margin:0">

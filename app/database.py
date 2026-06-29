@@ -152,6 +152,7 @@ async def init_db() -> None:
         await db.execute(CREATE_COMPLAINT_HISTORY)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
+        await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")
         await db.commit()
     finally:
         await db.close()

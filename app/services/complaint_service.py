@@ -86,7 +86,7 @@ async def list_complaints(category=None, ward=None, status=None,
     try:
         cursor = await db.execute(
             f"""SELECT id, category, ward, description, photo_path, status,
-                       created_at, updated_at
+                       filer_unseen, created_at, updated_at
                 FROM complaints{where} ORDER BY created_at DESC, id DESC""",
             params,
         )
@@ -185,8 +185,8 @@ async def update_status(complaint_id: int, admin_id: int, new_status: str,
             return False
         old_status = row["status"]
         await db.execute(
-            """UPDATE complaints SET status = ?, updated_at = datetime('now')
-               WHERE id = ?""",
+            """UPDATE complaints SET status = ?, filer_unseen = 1,
+               updated_at = datetime('now') WHERE id = ?""",
             (new_status, complaint_id),
         )
         await db.execute(
@@ -199,6 +199,76 @@ async def update_status(complaint_id: int, admin_id: int, new_status: str,
         return True
     finally:
         await db.close()
+
+
+async def mark_seen(complaint_id: int, user_id: int) -> None:
+    """Clear the 'unseen update' flag once the filer views their complaint."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE complaints SET filer_unseen = 0 WHERE id = ? AND user_id = ?",
+            (complaint_id, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def count_unseen_for_user(user_id: int) -> int:
+    """How many of the user's complaints have an unseen status update."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT COUNT(*) AS c FROM complaints WHERE user_id = ? AND filer_unseen = 1",
+            (user_id,),
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    return row["c"] if row else 0
+
+
+async def complaint_stats() -> dict:
+    """Aggregate counts for the admin analytics view."""
+    open_ph = ",".join("?" * len(COMPLAINT_OPEN_STATUSES))
+    db = await get_db()
+    try:
+        async def scalar(query, params=()):
+            cur = await db.execute(query, params)
+            row = await cur.fetchone()
+            return row["c"] if row else 0
+
+        async def grouped(query, params=()):
+            cur = await db.execute(query, params)
+            return [dict(r) for r in await cur.fetchall()]
+
+        total = await scalar("SELECT COUNT(*) AS c FROM complaints")
+        open_count = await scalar(
+            f"SELECT COUNT(*) AS c FROM complaints WHERE status IN ({open_ph})",
+            COMPLAINT_OPEN_STATUSES)
+        resolved = await scalar(
+            "SELECT COUNT(*) AS c FROM complaints WHERE status = 'resolved'")
+        this_month = await scalar(
+            "SELECT COUNT(*) AS c FROM complaints "
+            "WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')")
+        by_category = await grouped(
+            "SELECT category, COUNT(*) AS c FROM complaints "
+            "GROUP BY category ORDER BY c DESC")
+        by_ward = await grouped(
+            "SELECT COALESCE(ward, '—') AS ward, COUNT(*) AS c FROM complaints "
+            "GROUP BY ward ORDER BY c DESC")
+        by_status = await grouped(
+            "SELECT status, COUNT(*) AS c FROM complaints GROUP BY status")
+        matrix_rows = await grouped(
+            "SELECT COALESCE(ward, '—') AS ward, category, COUNT(*) AS c "
+            "FROM complaints GROUP BY ward, category")
+    finally:
+        await db.close()
+    return {
+        "total": total, "open": open_count, "resolved": resolved,
+        "this_month": this_month, "by_category": by_category,
+        "by_ward": by_ward, "by_status": by_status, "matrix_rows": matrix_rows,
+    }
 
 
 async def withdraw_complaint(complaint_id: int, user_id: int) -> bool:

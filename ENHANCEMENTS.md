@@ -26,8 +26,9 @@ following still need a human:
 - [x] Public **anonymous** community board (filer identity kept to the admin/audit trail only)
 - [x] Filer can withdraw a still-"submitted" complaint; per-user rate limit on filing
 - [x] Status-change audit trail (who changed what, when, with a note)
-- [ ] Ward-level complaint analytics ("15 water complaints from Ward 3 this month")
-- [ ] Notify the filer when their complaint status changes
+- [x] Ward-level complaint analytics (totals, by category/ward/status, ward×category matrix, this-month)
+- [x] Notify the filer when their complaint status changes (in-app: dashboard banner + "Updated" badge)
+- [ ] Email / SMS notification on status change (needs an external provider)
 
 ## Data Collection
 - [ ] Agentic data collector: AI agent that scrapes government portals, structures scheme data and eligibility rules, loops until coverage is complete

@@ -18,7 +18,7 @@
         <td>{{ label(c.category) }}</td>
         <td>{{ c.ward or '—' }}</td>
         <td>{{ c.description | truncate(70) }}</td>
-        <td>{{ status_pill(c.status) }}</td>
+        <td>{{ status_pill(c.status) }}{% if c.filer_unseen %} <span class="pill pill-orange">Updated</span>{% endif %}</td>
         <td><span class="muted">{{ c.created_at }}</span></td>
         <td>
             {% if c.status == 'submitted' %}

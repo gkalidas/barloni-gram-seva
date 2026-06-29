@@ -339,6 +339,15 @@ def run(base):
     check("public detail reflects new status", "In progress" in det.text)
     check("status note recorded in history", "Sent to water dept" in det.text)
 
+    # in-app notification to the filer when status changes
+    check("filer dashboard shows a status-update notice",
+          "status update" in comp.get("/dashboard").text.lower())
+    check("my-complaints flags the updated complaint",
+          "Updated" in comp.get("/my/complaints").text)
+    comp.get(f"/complaints/{cid}")  # owner views it -> clears the flag
+    check("notification cleared after the filer views it",
+          "status update" not in comp.get("/dashboard").text.lower())
+
     # withdraw a fresh (submitted) complaint
     r = comp.post("/complaints", data={"category": "roads", "description": "Pothole on main road."})
     cid2 = first_int(r"/complaints/(\d+)", r.headers.get("location", ""))
@@ -347,6 +356,13 @@ def run(base):
     check("withdrawn status shown", "Withdrawn" in anon.get(f"/complaints/{cid2}").text)
     check("admin dashboard shows open-complaints stat",
           "Open complaints" in admin.get("/admin").text)
+
+    # ward-level analytics
+    an = admin.get("/admin/complaints/analytics")
+    check("admin analytics loads", an.status_code == 200 and "Complaint Analytics" in an.text)
+    check("analytics shows ward breakdown (Ward 2)", "Ward 2" in an.text)
+    check("analytics shows category breakdown (Water)", "Water" in an.text)
+    check("analytics ward x category matrix present", "Ward × category" in an.text)
 
     # ---------- Security ----------
     section("Security (HTTP)")

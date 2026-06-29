@@ -140,6 +140,8 @@ async def complaint_detail(request: Request, complaint_id: int):
         return RedirectResponse("/complaints", status_code=303)
     history = await complaint_service.list_status_history(complaint_id)
     is_owner = bool(user and user["id"] == complaint["user_id"])
+    if is_owner and complaint.get("filer_unseen"):
+        await complaint_service.mark_seen(complaint_id, user["id"])
     return _templates(request).TemplateResponse(request,
         "complaints/detail.html",
         {
@@ -163,6 +165,23 @@ async def admin_complaints(request: Request, category: str = "",
             "request": request, "user": admin, "complaints": complaints,
             "categories": COMPLAINT_CATEGORIES, "wards": settings.COMPLAINT_WARDS,
             "category": category, "ward": ward, "status": status,
+        },
+    )
+
+
+@router.get("/admin/complaints/analytics", response_class=HTMLResponse)
+async def admin_complaint_analytics(request: Request):
+    admin = await require_admin(request)
+    stats = await complaint_service.complaint_stats()
+    matrix = {}
+    for r in stats["matrix_rows"]:
+        matrix.setdefault(r["ward"], {})[r["category"]] = r["c"]
+    return _templates(request).TemplateResponse(request,
+        "admin/complaint_analytics.html",
+        {
+            "request": request, "user": admin, "stats": stats,
+            "matrix": matrix, "wards": sorted(matrix.keys()),
+            "categories": COMPLAINT_CATEGORIES,
         },
     )
 

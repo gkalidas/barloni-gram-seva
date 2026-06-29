@@ -3,6 +3,13 @@
 {% block content %}
 <h1>Hello, {{ user.username }}</h1>
 
+{% if complaint_updates %}
+<div class="flash flash-info">
+    {{ complaint_updates }} of your complaint(s) have a status update.
+    <a href="/my/complaints">View my complaints</a>
+</div>
+{% endif %}
+
 <div class="stats" style="margin-bottom:1.2rem">
     <div class="stat green">
         <span class="num">{{ eligible_count }}</span>
