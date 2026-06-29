@@ -41,13 +41,17 @@ def delete_photo(path: Optional[str]) -> None:
 # --- create ----------------------------------------------------------------
 
 async def create_complaint(user_id: int, category: str, ward: str,
-                           description: str, photo_path: Optional[str]) -> int:
+                           description: str, photo_path: Optional[str],
+                           ctype: str = "civic",
+                           scheme_id: Optional[int] = None) -> int:
     db = await get_db()
     try:
         cursor = await db.execute(
-            """INSERT INTO complaints (user_id, category, ward, description, photo_path)
-               VALUES (?, ?, ?, ?, ?)""",
-            (user_id, category, ward or None, description, photo_path),
+            """INSERT INTO complaints
+               (user_id, category, ward, description, photo_path, type, scheme_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, category, ward or None, description, photo_path,
+             ctype, scheme_id),
         )
         complaint_id = cursor.lastrowid
         await db.execute(
@@ -60,6 +64,16 @@ async def create_complaint(user_id: int, category: str, ward: str,
         return complaint_id
     finally:
         await db.close()
+
+
+async def create_eligibility_dispute(user_id: int, scheme_id: int,
+                                     description: str) -> int:
+    """A resident disputes the system's "not eligible" verdict for a scheme.
+    Stored as a PRIVATE complaint (type='eligibility'), never on the board."""
+    from app.constants import ELIGIBILITY_CATEGORY
+    return await create_complaint(
+        user_id, ELIGIBILITY_CATEGORY, "", description, None,
+        ctype="eligibility", scheme_id=scheme_id)
 
 
 # --- queries ---------------------------------------------------------------
@@ -76,18 +90,26 @@ def _build_filters(category, ward, status):
 
 
 async def list_complaints(category=None, ward=None, status=None,
-                          user_id=None) -> list:
-    """Board / 'my complaints' view. No filer identity is selected here."""
+                          user_id=None, ctype=None) -> list:
+    """Board / 'my complaints' view. No filer identity is selected here.
+
+    The public board passes ctype='civic' (eligibility disputes are private);
+    'my complaints' passes ctype=None to show every type the user has filed.
+    """
     clauses, params = _build_filters(category, ward, status)
     if user_id is not None:
         clauses.append("user_id = ?"); params.append(user_id)
-    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    if ctype is not None:
+        clauses.append("type = ?"); params.append(ctype)
+    where = (" WHERE " + " AND ".join("c." + c for c in clauses)) if clauses else ""
     db = await get_db()
     try:
         cursor = await db.execute(
-            f"""SELECT id, category, ward, description, photo_path, status,
-                       filer_unseen, created_at, updated_at
-                FROM complaints{where} ORDER BY created_at DESC, id DESC""",
+            f"""SELECT c.id, c.category, c.ward, c.description, c.photo_path,
+                       c.status, c.filer_unseen, c.type, c.scheme_id,
+                       c.created_at, c.updated_at, s.name AS scheme_name
+                FROM complaints c LEFT JOIN schemes s ON s.id = c.scheme_id
+                {where} ORDER BY c.created_at DESC, c.id DESC""",
             params,
         )
         rows = await cursor.fetchall()
@@ -96,15 +118,20 @@ async def list_complaints(category=None, ward=None, status=None,
     return [dict(r) for r in rows]
 
 
-async def list_complaints_admin(category=None, ward=None, status=None) -> list:
-    """Admin list — includes the filer's identity."""
+async def list_complaints_admin(category=None, ward=None, status=None,
+                                ctype=None) -> list:
+    """Admin list — includes the filer's identity and any linked scheme."""
     clauses, params = _build_filters(category, ward, status)
+    if ctype is not None:
+        clauses.append("type = ?"); params.append(ctype)
     where = (" WHERE " + " AND ".join("c." + c for c in clauses)) if clauses else ""
     db = await get_db()
     try:
         cursor = await db.execute(
-            f"""SELECT c.*, u.username AS filer_username, u.mobile AS filer_mobile
+            f"""SELECT c.*, u.username AS filer_username, u.mobile AS filer_mobile,
+                       s.name AS scheme_name
                 FROM complaints c JOIN users u ON u.id = c.user_id
+                LEFT JOIN schemes s ON s.id = c.scheme_id
                 {where} ORDER BY c.created_at DESC, c.id DESC""",
             params,
         )
@@ -118,7 +145,10 @@ async def get_complaint(complaint_id: int) -> Optional[dict]:
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT * FROM complaints WHERE id = ?", (complaint_id,)
+            """SELECT c.*, s.name AS scheme_name
+               FROM complaints c LEFT JOIN schemes s ON s.id = c.scheme_id
+               WHERE c.id = ?""",
+            (complaint_id,),
         )
         row = await cursor.fetchone()
     finally:
@@ -130,10 +160,29 @@ async def get_complaint_with_filer(complaint_id: int) -> Optional[dict]:
     db = await get_db()
     try:
         cursor = await db.execute(
-            """SELECT c.*, u.username AS filer_username, u.mobile AS filer_mobile
+            """SELECT c.*, u.username AS filer_username, u.mobile AS filer_mobile,
+                      s.name AS scheme_name
                FROM complaints c JOIN users u ON u.id = c.user_id
+               LEFT JOIN schemes s ON s.id = c.scheme_id
                WHERE c.id = ?""",
             (complaint_id,),
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    return dict(row) if row else None
+
+
+async def get_user_dispute_for_scheme(user_id: int, scheme_id: int) -> Optional[dict]:
+    """Return this user's most recent eligibility dispute for a scheme, if any
+    (used to avoid duplicate disputes and show its status on the scheme page)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT id, status, created_at FROM complaints
+               WHERE user_id = ? AND scheme_id = ? AND type = 'eligibility'
+               ORDER BY created_at DESC, id DESC LIMIT 1""",
+            (user_id, scheme_id),
         )
         row = await cursor.fetchone()
     finally:

@@ -86,7 +86,12 @@ async def _execute(action_key: str, payload: dict) -> None:
             except OSError:
                 pass
     elif action_key == "scheme.delete":
-        await scheme_service.delete_scheme(payload["scheme_id"])
+        paths = await scheme_service.delete_scheme(payload["scheme_id"])
+        for p in paths:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
     elif action_key == "user.role":
         await user_service.update_role(payload["user_id"], payload["role"])
     elif action_key == "user.active":

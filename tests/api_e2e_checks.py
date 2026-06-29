@@ -142,8 +142,11 @@ def run(base):
     r = fill_profile(user, occupation="farmer")
     check("POST /profile/edit first time -> 303", r.status_code == 303)
     page = user.get("/my-schemes")
-    check("GET /my-schemes shows PM-KISAN", page.status_code == 200 and "PM-KISAN" in page.text)
-    check("farmer not shown female-only Sukanya", "Sukanya" not in page.text)
+    # /my-schemes also lists near-miss schemes below the "close to qualifying"
+    # heading; scope the exclusion check to the eligible section above it.
+    page_elig = page.text.split("close to qualifying")[0]
+    check("GET /my-schemes shows PM-KISAN", page.status_code == 200 and "PM-KISAN" in page_elig)
+    check("farmer not shown female-only Sukanya", "Sukanya" not in page_elig)
     # second edit -> change request (303 to /profile)
     r = fill_profile(user, annual_family_income="80000")
     check("2nd /profile/edit -> 303 (change request)", r.status_code == 303)
@@ -644,6 +647,79 @@ def run(base):
           user.get("/admin/approvals").status_code == 403)
     # reset policy so later/other behaviour is unaffected
     su.post("/admin/approval-policy", data={})
+
+    # ---------- Scheme sources + eligibility dispute ----------
+    section("Scheme sources + eligibility dispute")
+
+    # a scheme nobody can qualify for (impossible age window)
+    admin.post("/admin/schemes/add", data={
+        "name": "Eligibility Test Scheme", "status": "active",
+        "min_age": "200", "max_age": "201"})
+    et_sid = int(re.search(r"<td>(\d+)</td>\s*<td>Eligibility Test Scheme",
+                           admin.get("/admin/schemes").text).group(1))
+
+    # sources: add an official link + upload a GR file
+    r = admin.post(f"/admin/schemes/{et_sid}/sources/link",
+                   data={"label": "Official page", "url": "https://example.gov.in/scheme"})
+    check("admin adds source link -> 303", r.status_code == 303)
+    r = admin.post(f"/admin/schemes/{et_sid}/sources/file", data={"label": "GR 2024"},
+                   files={"file": ("gr.pdf", b"%PDF-1.4 fake gr bytes", "application/pdf")})
+    check("admin uploads GR file -> 303", r.status_code == 303)
+    detail = anon.get(f"/schemes/{et_sid}").text
+    check("public scheme page shows the source link",
+          "https://example.gov.in/scheme" in detail)
+    check("public scheme page shows the GR file", "GR 2024" in detail)
+    src_file_id = int(re.search(rf"/schemes/{et_sid}/sources/(\d+)/file", detail).group(1))
+    dl = anon.get(f"/schemes/{et_sid}/sources/{src_file_id}/file")
+    check("anon downloads the GR file as attachment",
+          dl.status_code == 200 and "attachment" in dl.headers.get("content-disposition", ""))
+    # disallowed file type is rejected
+    r = admin.post(f"/admin/schemes/{et_sid}/sources/file",
+                   files={"file": ("evil.svg", b"<svg/>", "image/svg+xml")})
+    check("disallowed source file type rejected",
+          "not+allowed" in r.headers.get("location", ""))
+    # delete a source removes the file
+    r = admin.post(f"/admin/schemes/{et_sid}/sources/{src_file_id}/delete")
+    check("admin deletes a source -> 303", r.status_code == 303)
+    check("deleted GR file no longer downloadable (404)",
+          anon.get(f"/schemes/{et_sid}/sources/{src_file_id}/file").status_code == 404)
+
+    # eligibility dispute: a resident who the system says doesn't qualify
+    du = new_client(base)
+    signup(du, "disputer", "9000060001")
+    fill_profile(du)  # age ~46, never 200+, so NOT eligible
+    p = du.get(f"/schemes/{et_sid}").text
+    check("non-eligible user is told they don't qualify", "don't currently qualify" in p)
+    check("dispute form is shown on a non-eligible scheme",
+          f'action="/schemes/{et_sid}/dispute"' in p)
+    r = du.post(f"/schemes/{et_sid}/dispute",
+                data={"description": "My age is fine, I can provide proof."})
+    check("POST dispute -> 303 to the complaint",
+          r.status_code == 303 and "/complaints/" in r.headers.get("location", ""))
+    disp_id = int(re.search(r"/complaints/(\d+)", r.headers["location"]).group(1))
+    my = du.get("/my/complaints").text
+    check("dispute appears in 'my complaints' as Eligibility",
+          f"/complaints/{disp_id}" in my and "Eligibility" in my)
+    check("eligibility dispute is NOT on the public board",
+          f"/complaints/{disp_id}" not in anon.get("/complaints").text)
+    ac = admin.get("/admin/complaints").text
+    check("admin sees the dispute typed Eligibility + scheme",
+          "Eligibility" in ac and "Eligibility Test Scheme" in ac)
+    # one open dispute per scheme
+    r = du.post(f"/schemes/{et_sid}/dispute", data={"description": "again"})
+    check("duplicate open dispute is blocked", r.status_code == 303)
+    # cannot dispute a scheme you already qualify for
+    admin.post("/admin/schemes/add", data={"name": "Open To All Scheme", "status": "active"})
+    open_sid = int(re.search(r"<td>(\d+)</td>\s*<td>Open To All Scheme",
+                             admin.get("/admin/schemes").text).group(1))
+    check("eligible user sees a 'you qualify' message",
+          "you qualify" in du.get(f"/schemes/{open_sid}").text.lower())
+    r = du.post(f"/schemes/{open_sid}/dispute", data={"description": "x"})
+    check("dispute blocked when already eligible",
+          r.status_code == 303 and "already+qualify" in r.headers.get("location", ""))
+    check("anon POST dispute -> 303 login",
+          new_client(base).post(f"/schemes/{et_sid}/dispute",
+                                data={"description": "x"}).status_code == 303)
 
     # ---------- Security ----------
     section("Security (HTTP)")

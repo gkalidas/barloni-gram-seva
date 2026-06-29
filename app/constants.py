@@ -17,6 +17,15 @@ COMPLAINT_CATEGORIES = [
     "water", "electricity", "garbage", "roads", "drainage", "other",
 ]
 
+# A complaint is either a civic issue (public anonymous board) or an eligibility
+# dispute ("the system says I don't qualify, but I think I do") tied to a scheme.
+# Eligibility disputes are PRIVATE — never shown on the public board.
+COMPLAINT_TYPES = ["civic", "eligibility"]
+
+# Fixed category stored on eligibility disputes (keeps the NOT NULL column happy
+# and lets us label them without polluting the civic category filters).
+ELIGIBILITY_CATEGORY = "eligibility"
+
 # Full lifecycle. 'submitted' is the initial state; 'withdrawn' is set by the
 # filer; the rest are set by an admin.
 COMPLAINT_STATUSES = [

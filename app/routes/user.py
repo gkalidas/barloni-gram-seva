@@ -13,6 +13,7 @@ from app.services import (
     document_service, user_document_service, complaint_service,
 )
 from app.constants import GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP
+from app.rate_limit import complaint_submissions
 
 router = APIRouter()
 
@@ -285,6 +286,8 @@ async def my_schemes(request: Request):
     user = await require_user(request)
     profile = user_service.get_profile(user)
     eligible = []
+    near_miss = []
+    recommendations = []
     if profile:
         schemes = await scheme_service.list_schemes(only_active=True)
         eligible = eligibility_service.matching_schemes(profile, schemes)
@@ -294,6 +297,10 @@ async def my_schemes(request: Request):
             scheme["docs_total"] = len(required)
             scheme["docs_have"] = sum(1 for d in required if d in approved)
             scheme["docs_missing"] = [d for d in required if d not in approved]
+        # Schemes the resident is *close* to qualifying for (partial eligibility),
+        # plus the single actions that would unlock the most additional schemes.
+        near_miss = eligibility_service.near_miss_schemes(profile, schemes)
+        recommendations = eligibility_service.recommend_actions(profile, schemes)
     return _templates(request).TemplateResponse(request,
         "user/eligibility.html",
         {
@@ -301,8 +308,49 @@ async def my_schemes(request: Request):
             "user": user,
             "profile": profile,
             "schemes": eligible,
+            "near_miss": near_miss,
+            "recommendations": recommendations,
         },
     )
+
+
+@router.post("/schemes/{scheme_id}/dispute")
+async def dispute_eligibility(request: Request, scheme_id: int,
+                              description: str = Form("")):
+    """A resident disputes the system's 'not eligible' verdict for a scheme.
+    Allowed only when the system actually says they don't qualify."""
+    user = await require_user(request)
+    scheme = await scheme_service.get_scheme(scheme_id)
+    if scheme is None:
+        return RedirectResponse("/schemes", status_code=303)
+
+    def back(msg):
+        return RedirectResponse(f"/schemes/{scheme_id}?msg={msg}", status_code=303)
+
+    profile = user_service.get_profile(user)
+    if not profile:
+        return back("Fill+your+profile+before+raising+an+eligibility+dispute")
+    # Only allow a dispute when the system's verdict is "not eligible".
+    if eligibility_service.evaluate_scheme(profile, scheme.get("eligibility_rules")):
+        return back("You+already+qualify+for+this+scheme")
+    # One open dispute per scheme is enough.
+    existing = await complaint_service.get_user_dispute_for_scheme(user["id"], scheme_id)
+    if existing and existing["status"] in ("submitted", "acknowledged", "in_progress"):
+        return RedirectResponse(
+            f"/complaints/{existing['id']}?msg=You+already+raised+this+dispute",
+            status_code=303)
+    description = (description or "").strip()
+    if not description:
+        return back("Please+explain+why+you+believe+you+qualify")
+    if complaint_submissions.is_blocked(str(user["id"])):
+        return back("You+have+filed+several+requests+recently.+Try+again+later")
+
+    dispute_id = await complaint_service.create_eligibility_dispute(
+        user["id"], scheme_id, description)
+    complaint_submissions.record(str(user["id"]))
+    return RedirectResponse(
+        f"/complaints/{dispute_id}?msg=Eligibility+dispute+raised+%E2%80%94+an+admin+will+review+it",
+        status_code=303)
 
 
 # --- Account / password ----------------------------------------------------

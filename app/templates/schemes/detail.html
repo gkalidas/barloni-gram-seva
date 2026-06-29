@@ -75,6 +75,51 @@
 </div>
 {% endif %}
 
+{% if sources %}
+<div class="detail-row">
+    <div class="k">Sources &amp; references</div>
+    <div class="v">
+        <p class="muted" style="margin-bottom:0.4rem">Official Government Resolution (GR) and source links for this scheme.</p>
+        <ul class="clean">
+        {% for src in sources %}
+            <li>
+            {% if src.kind == 'file' %}
+                📄 <a href="/schemes/{{ scheme.id }}/sources/{{ src.id }}/file">{{ src.label or src.original_name or 'Download GR / document' }}</a>
+                <span class="muted">(download)</span>
+            {% else %}
+                🔗 <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer">{{ src.label or src.url }}</a>
+            {% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{# Eligibility verdict + dispute (logged-in residents with a profile) #}
+{% if is_eligible is not none %}
+<div class="card" style="margin-top:1.2rem">
+    {% if is_eligible %}
+        <p class="pill pill-green">Based on your profile, you qualify for this scheme.</p>
+    {% else %}
+        <p><strong>Our system says you don't currently qualify for this scheme.</strong></p>
+        {% if existing_dispute and existing_dispute.status in ['submitted', 'acknowledged', 'in_progress'] %}
+            <p class="muted">You've raised a dispute about this — <a href="/complaints/{{ existing_dispute.id }}">track it here</a> ({{ existing_dispute.status | replace('_',' ') }}).</p>
+        {% else %}
+            <p class="muted">If you believe you actually meet the criteria, tell us why and an admin will review it.</p>
+            <form method="post" action="/schemes/{{ scheme.id }}/dispute">
+                <div class="field">
+                    <label for="dispute_desc">Why do you think you qualify?</label>
+                    <textarea id="dispute_desc" name="description" rows="3" required
+                        placeholder="e.g. My annual income is actually ₹90,000, below the limit — I can provide an income certificate."></textarea>
+                </div>
+                <button class="btn" type="submit">I think I qualify — raise a dispute</button>
+            </form>
+        {% endif %}
+    {% endif %}
+</div>
+{% endif %}
+
 <div style="margin-top:1.2rem">
     {% if user %}
         <a class="btn btn-green" href="/my-schemes">Check my eligibility</a>

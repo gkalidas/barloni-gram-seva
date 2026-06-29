@@ -8,7 +8,9 @@
     <p>Fill your profile first to see schemes you are eligible for.</p>
     <a class="btn btn-green" href="/profile/edit">Fill profile</a>
 </div>
-{% elif schemes %}
+{% else %}
+
+{% if schemes %}
 <p class="muted">Based on your profile, you qualify for {{ schemes|length }} scheme(s).</p>
 <div class="scheme-list">
     {% for s in schemes %}
@@ -39,5 +41,49 @@
     <p class="muted">Schemes and eligibility change often — check back later, or browse all schemes.</p>
     <a class="btn btn-outline" href="/schemes">Browse all schemes</a>
 </div>
+{% endif %}
+
+{# --- Everything below is about schemes the resident is NOT yet eligible for --- #}
+
+{% if near_miss %}
+<h2 style="margin-top:2rem">Schemes you're close to qualifying for</h2>
+<p class="muted">You meet most of the criteria for these — here's what's missing.</p>
+<div class="scheme-list">
+    {% for s in near_miss %}
+    {% set elig = s._eligibility %}
+    <div class="scheme-card">
+        <h3>{{ s.name }}</h3>
+        <div class="meta">
+            {% if s.ministry %}{{ s.ministry }} &middot; {% endif %}
+            <span class="pill pill-orange">{{ elig.met_count }}/{{ elig.total }} criteria met</span>
+        </div>
+        <div class="obj">{{ s.objective or '' }}</div>
+        <div class="meta" style="margin-top:0.5rem">
+            <span class="muted">Missing:</span>
+            <ul style="margin:0.25rem 0">
+                {% for c in elig.unmet %}
+                <li>{{ c.label }}{% if c.fix_label %} — <em>{{ c.fix_label }}</em>{% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="foot"><a class="btn btn-sm" href="/schemes/{{ s.id }}">View details</a></div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if recommendations %}
+<div class="card" style="margin-top:1.5rem;border-left:4px solid var(--green, #2e7d32)">
+    <h3 style="margin-top:0">Recommended next steps</h3>
+    <p class="muted">Each of these would make you eligible for more schemes:</p>
+    <ul>
+        {% for r in recommendations %}
+        <li><strong>{{ r.fix_label }}</strong> — unlocks {{ r.count }} more scheme(s):
+            <span class="muted">{{ r.schemes | join(', ') }}</span></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 {% endif %}
 {% endblock %}

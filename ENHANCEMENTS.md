@@ -34,6 +34,10 @@ following still need a human:
 - [x] Homepage "Raise a Complaint" CTA enabled
 - [ ] Email / SMS notification on status change (needs an external provider)
 
+## Schemes — sources & eligibility disputes
+- [x] Scheme **sources / references**: admins attach the Government Resolution (GR) file in any format + official source links; shown publicly on the scheme page (files served as a download)
+- [x] **Eligibility dispute**: when the matcher says a resident is *not* eligible, they can raise a private complaint ("I think I qualify") tied to that scheme — reuses the complaint engine (status tracking, admin queue, notifications) but is kept off the public anonymous board
+
 ## Data Collection
 - [ ] Agentic data collector: AI agent that scrapes government portals, structures scheme data and eligibility rules, loops until coverage is complete
 - [ ] Auto-update mechanism: periodic re-scraping to catch scheme changes, new schemes, deadline updates
@@ -68,8 +72,8 @@ following still need a human:
 
 ## Eligibility Engine Improvements
 - [ ] Rule versioning: track when eligibility rules change
-- [ ] Partial eligibility: "you meet 4/5 criteria, missing: BPL card"
-- [ ] Recommended actions: "get a BPL card to qualify for 3 more schemes"
+- [x] Partial eligibility: "you meet 4/5 criteria, missing: BPL card" — shown on `/my-schemes`
+- [x] Recommended actions: "get a BPL card to qualify for 3 more schemes" — shown on `/my-schemes`
 - [ ] Notification when new schemes match a user's profile
 
 ## Security Enhancements

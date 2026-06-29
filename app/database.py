@@ -85,6 +85,23 @@ CREATE TABLE IF NOT EXISTS schemes (
 """
 
 
+# Source references for a scheme: the Government Resolution (GR) file in any
+# format, and/or official source links. Public — anyone can view them.
+CREATE_SCHEME_SOURCES = """
+CREATE TABLE IF NOT EXISTS scheme_sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scheme_id INTEGER NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'link',   -- 'link' | 'file'
+    label TEXT,                          -- display label (e.g. "GR dated 2024-01-12")
+    url TEXT,                            -- for kind='link'
+    file_path TEXT,                      -- for kind='file' (on-disk path)
+    original_name TEXT,                  -- friendly download name for files
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (scheme_id) REFERENCES schemes(id)
+);
+"""
+
+
 CREATE_COMPLAINTS = """
 CREATE TABLE IF NOT EXISTS complaints (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,6 +236,7 @@ async def init_db() -> None:
         await db.execute(CREATE_DOCUMENTS)
         await db.execute(CREATE_USER_DOCUMENTS)
         await db.execute(CREATE_SCHEMES)
+        await db.execute(CREATE_SCHEME_SOURCES)
         await db.execute(CREATE_COMPLAINTS)
         await db.execute(CREATE_COMPLAINT_HISTORY)
         await db.execute(CREATE_RESPONSIBLE_PEOPLE)
@@ -229,6 +247,8 @@ async def init_db() -> None:
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")
+        await _ensure_column(db, "complaints", "type", "TEXT DEFAULT 'civic'")
+        await _ensure_column(db, "complaints", "scheme_id", "INTEGER")
         await _ensure_column(db, "users", "active", "INTEGER DEFAULT 1")
         await db.commit()
     finally:

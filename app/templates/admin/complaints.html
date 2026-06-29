@@ -37,13 +37,14 @@
 {% if complaints %}
 <div class="table-wrap">
 <table>
-    <thead><tr><th>#</th><th>Filer</th><th>Category</th><th>Ward</th><th>Issue</th><th>Status</th><th>Reported</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Filer</th><th>Type</th><th>Category / scheme</th><th>Ward</th><th>Issue</th><th>Status</th><th>Reported</th><th></th></tr></thead>
     <tbody>
     {% for c in complaints %}
     <tr>
         <td>#{{ c.id }}</td>
         <td>{{ c.filer_username }}<br><span class="muted">{{ c.filer_mobile }}</span></td>
-        <td>{{ label(c.category) }}</td>
+        <td>{% if c.type == 'eligibility' %}<span class="pill pill-orange">Eligibility</span>{% else %}<span class="pill pill-gray">Civic</span>{% endif %}</td>
+        <td>{% if c.type == 'eligibility' %}{{ c.scheme_name or '—' }}{% else %}{{ label(c.category) }}{% endif %}</td>
         <td>{{ c.ward or '—' }}</td>
         <td>{{ c.description | truncate(60) }}</td>
         <td>{{ status_pill(c.status) }}</td>

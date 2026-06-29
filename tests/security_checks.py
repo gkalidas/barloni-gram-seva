@@ -312,8 +312,11 @@ def run():
         pending = [r for r in reqs if r["status"] == "pending"]
         check("only one pending request allowed", len(pending) == 1, f"{len(pending)}")
 
-        # eligibility BEFORE approval: not eligible for PM-KISAN (needs farmer)
-        page_before = ud.get("/my-schemes").text
+        # eligibility BEFORE approval: not eligible for PM-KISAN (needs farmer).
+        # Look only at the eligible section — /my-schemes also lists near-miss
+        # schemes below the "close to qualifying" heading, and a labourer is one
+        # criterion away from the farmer-only PM-KISAN.
+        page_before = ud.get("/my-schemes").text.split("close to qualifying")[0]
         check("PM-KISAN not eligible before approval (labourer)",
               "PM-KISAN" not in page_before, "PM-KISAN shown")
 

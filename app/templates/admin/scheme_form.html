@@ -150,4 +150,72 @@
     <button class="btn btn-green btn-block" type="submit">{{ 'Save changes' if scheme and scheme.id else 'Add scheme' }}</button>
 </form>
 </div>
+
+{# Sources & references: GR file (any format) + official links. Managed
+   separately so files upload independently of the structured scheme form. #}
+<div class="card">
+    <h2>Sources &amp; references</h2>
+    {% if scheme and scheme.id %}
+    <p class="hint">Attach the Government Resolution (GR) and official links. These are shown publicly on the scheme page.</p>
+
+    {% if sources %}
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Type</th><th>Label / link</th><th></th></tr></thead>
+        <tbody>
+        {% for src in sources %}
+        <tr>
+            <td>{% if src.kind == 'file' %}📄 File{% else %}🔗 Link{% endif %}</td>
+            <td>
+                {% if src.kind == 'file' %}
+                    <a href="/schemes/{{ scheme.id }}/sources/{{ src.id }}/file">{{ src.label or src.original_name }}</a>
+                {% else %}
+                    <a href="{{ src.url }}" target="_blank" rel="noopener noreferrer">{{ src.label or src.url }}</a>
+                {% endif %}
+            </td>
+            <td>
+                <form method="post" action="/admin/schemes/{{ scheme.id }}/sources/{{ src.id }}/delete" data-confirm="Remove this source?">
+                    <button class="btn btn-sm btn-red" type="submit">Remove</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">No sources added yet.</p>
+    {% endif %}
+
+    <div class="grid grid-2" style="margin-top:1rem">
+        <form method="post" action="/admin/schemes/{{ scheme.id }}/sources/link">
+            <h3>Add a link</h3>
+            <div class="field">
+                <label for="src_label_link">Label <span class="hint">(optional)</span></label>
+                <input type="text" id="src_label_link" name="label" placeholder="e.g. Official scheme page">
+            </div>
+            <div class="field">
+                <label for="src_url">URL</label>
+                <input type="url" id="src_url" name="url" placeholder="https://…" required>
+            </div>
+            <button class="btn btn-outline" type="submit">Add link</button>
+        </form>
+        <form method="post" action="/admin/schemes/{{ scheme.id }}/sources/file" enctype="multipart/form-data">
+            <h3>Upload a GR / document</h3>
+            <div class="field">
+                <label for="src_label_file">Label <span class="hint">(optional)</span></label>
+                <input type="text" id="src_label_file" name="label" placeholder="e.g. GR dated 2024-01-12">
+            </div>
+            <div class="field">
+                <label for="src_file">File</label>
+                <input type="file" id="src_file" name="file" required>
+                <span class="hint">PDF, image, doc, sheet — up to 10 MB.</span>
+            </div>
+            <button class="btn btn-outline" type="submit">Upload</button>
+        </form>
+    </div>
+    {% else %}
+    <p class="muted">Save the scheme first, then come back to its edit page to attach the GR and source links.</p>
+    {% endif %}
+</div>
 {% endblock %}

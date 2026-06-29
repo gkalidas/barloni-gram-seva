@@ -160,22 +160,29 @@ def run():
 
         # ---------- E. Eligibility matcher ----------
         section("E. Eligibility matcher")
+        # /my-schemes now also lists "close to qualifying" (near-miss) schemes
+        # and recommended actions below the eligible list. Exclusion checks must
+        # look only at the *eligible* section (the text before that heading).
+        def eligible_section(text):
+            return text.split("close to qualifying")[0]
+
         e = TestClient(app); signup(e, "farmerguy", "9000003000")
         fill_profile(e, occupation="farmer", land_ownership="marginal")
         page = e.get("/my-schemes").text
-        check("farmer sees PM-KISAN", "PM-KISAN" in page)
-        check("farmer-only excludes female-only Sukanya", "Sukanya" not in page)
+        page_elig = eligible_section(page)
+        check("farmer sees PM-KISAN", "PM-KISAN" in page_elig)
+        check("farmer-only excludes female-only Sukanya", "Sukanya" not in page_elig)
         # female-only visibility
         f = TestClient(app); signup(f, "girlchild", "9000003001")
         fill_profile(f, gender="female", date_of_birth="2020-01-01",
                      occupation="student", land_ownership="landless")
-        fp = f.get("/my-schemes").text
+        fp = eligible_section(f.get("/my-schemes").text)
         check("female child sees Sukanya", "Sukanya" in fp)
-        check("male not eligible for Sukanya (cross-check)", "Sukanya" not in page)
+        check("male not eligible for Sukanya (cross-check)", "Sukanya" not in page_elig)
         # income cap: high income drops Ayushman (needs bpl + income<=200k)
         g = TestClient(app); signup(g, "richguy", "9000003002")
         fill_profile(g, annual_family_income="999999", occupation="farmer")
-        gp = g.get("/my-schemes").text
+        gp = eligible_section(g.get("/my-schemes").text)
         check("high income excludes income-capped Awas", "Awas" not in gp)
         # no profile
         h = TestClient(app); signup(h, "noprofile", "9000003003")
@@ -185,7 +192,7 @@ def run():
         check("eligible scheme shows doc readiness wording",
               "document" in page.lower() or "doc" in page.lower())
         # BPL enforcement: farmer without a BPL card is excluded from BPL schemes
-        check("non-BPL farmer excluded from PM Awas (BPL-required)", "Awas" not in page)
+        check("non-BPL farmer excluded from PM Awas (BPL-required)", "Awas" not in page_elig)
 
         # ---------- F. Document locker ----------
         section("F. Document locker")

@@ -24,7 +24,8 @@ def _templates(request: Request):
 SCHEME_STATUSES = ["active", "closed", "upcoming"]
 
 
-def _scheme_form_context(request, user, scheme, action, documents, flash=None):
+def _scheme_form_context(request, user, scheme, action, documents,
+                         flash=None, sources=None):
     """Shared context for the add/edit scheme form template."""
     ctx = {
         "request": request,
@@ -38,6 +39,7 @@ def _scheme_form_context(request, user, scheme, action, documents, flash=None):
         "occupations": OCCUPATIONS,
         "land_ownership_options": LAND_OWNERSHIP,
         "action": action,
+        "sources": sources or [],
     }
     if flash:
         ctx["flash"] = flash
@@ -428,12 +430,13 @@ async def edit_scheme_form(request: Request, scheme_id: int):
         if scheme.get("scheme_data") else ""
     )
     documents = await document_service.list_documents()
+    sources = await scheme_service.list_sources(scheme_id)
     return _templates(request).TemplateResponse(
         request,
         "admin/scheme_form.html",
         _scheme_form_context(
             request, user, scheme,
-            f"/admin/schemes/{scheme_id}/edit", documents,
+            f"/admin/schemes/{scheme_id}/edit", documents, sources=sources,
         ),
     )
 
@@ -445,13 +448,14 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
     data, errors = _extract_scheme_form(form)
     if errors:
         documents = await document_service.list_documents()
+        sources = await scheme_service.list_sources(scheme_id)
         return _templates(request).TemplateResponse(
             request,
             "admin/scheme_form.html",
             _scheme_form_context(
                 request, user, _form_to_scheme_view(form, scheme_id),
                 f"/admin/schemes/{scheme_id}/edit", documents,
-                flash=("error", " ".join(errors)),
+                flash=("error", " ".join(errors)), sources=sources,
             ),
             status_code=400,
         )
@@ -469,6 +473,72 @@ async def delete_scheme_route(request: Request, scheme_id: int):
         admin, "scheme.delete", {"scheme_id": scheme_id}, f"Delete scheme '{name}'")
     msg = "Scheme+deleted" if result["executed"] else "Deletion+submitted+for+approval"
     return RedirectResponse(f"/admin/schemes?msg={msg}", status_code=303)
+
+
+# --- scheme sources (GR file + official links) -----------------------------
+
+def _edit_back(scheme_id, msg):
+    return RedirectResponse(
+        f"/admin/schemes/{scheme_id}/edit?msg={msg}", status_code=303)
+
+
+@router.post("/admin/schemes/{scheme_id}/sources/link")
+async def add_scheme_source_link(request: Request, scheme_id: int,
+                                 label: str = Form(""), url: str = Form("")):
+    admin = await require_admin(request)
+    if await scheme_service.get_scheme(scheme_id) is None:
+        return RedirectResponse("/admin/schemes", status_code=303)
+    url = (url or "").strip()
+    if not (url.startswith("http://") or url.startswith("https://")):
+        return _edit_back(scheme_id, "Enter+a+valid+http(s)+link")
+    await scheme_service.add_link_source(scheme_id, (label or "").strip(), url)
+    await activity_service.log(admin, "scheme.source.add",
+                               f"Added source link to scheme #{scheme_id}",
+                               "scheme", scheme_id)
+    return _edit_back(scheme_id, "Source+link+added")
+
+
+@router.post("/admin/schemes/{scheme_id}/sources/file")
+async def add_scheme_source_file(request: Request, scheme_id: int,
+                                 label: str = Form(""),
+                                 file: UploadFile = File(...)):
+    admin = await require_admin(request)
+    if await scheme_service.get_scheme(scheme_id) is None:
+        return RedirectResponse("/admin/schemes", status_code=303)
+    if not file or not file.filename:
+        return _edit_back(scheme_id, "Choose+a+file+to+upload")
+    if not scheme_service.is_allowed_source_file(file.filename):
+        allowed = ", ".join(sorted(scheme_service.SOURCE_ALLOWED_EXTENSIONS))
+        return _edit_back(scheme_id, f"File+type+not+allowed.+Allowed:+{allowed}")
+    content = await file.read()
+    if len(content) > scheme_service.SOURCE_MAX_BYTES:
+        mb = scheme_service.SOURCE_MAX_BYTES // (1024 * 1024)
+        return _edit_back(scheme_id, f"File+too+large+(max+{mb}+MB)")
+    if not content:
+        return _edit_back(scheme_id, "The+file+is+empty")
+    await scheme_service.add_file_source(
+        scheme_id, (label or "").strip(), file.filename, content)
+    await activity_service.log(admin, "scheme.source.add",
+                               f"Uploaded GR/source file to scheme #{scheme_id}",
+                               "scheme", scheme_id)
+    return _edit_back(scheme_id, "Source+file+uploaded")
+
+
+@router.post("/admin/schemes/{scheme_id}/sources/{source_id}/delete")
+async def delete_scheme_source(request: Request, scheme_id: int, source_id: int):
+    admin = await require_admin(request)
+    source = await scheme_service.get_source(source_id)
+    if source and source.get("scheme_id") == scheme_id:
+        path = await scheme_service.delete_source(source_id)
+        if path:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        await activity_service.log(admin, "scheme.source.delete",
+                                   f"Removed a source from scheme #{scheme_id}",
+                                   "scheme", scheme_id)
+    return _edit_back(scheme_id, "Source+removed")
 
 
 @router.post("/admin/documents/add")

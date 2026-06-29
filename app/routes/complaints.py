@@ -28,6 +28,7 @@ async def board(request: Request, category: str = "", ward: str = "", status: st
     user = await get_current_user(request)
     complaints = await complaint_service.list_complaints(
         category=category or None, ward=ward or None, status=status or None,
+        ctype="civic",
     )
     return _templates(request).TemplateResponse(request,
         "complaints/board.html",

@@ -4,13 +4,95 @@ A village-level government scheme information portal. Browse government schemes 
 
 ## Features
 
-- **Scheme Directory** — Anyone can browse and search government schemes (no login needed).
-- **Eligibility Matcher** — Logged-in users fill a one-time profile and instantly see which schemes they qualify for.
+- **Scheme Directory** — Anyone can browse and search government schemes (no login needed), including each scheme's official sources (Government Resolution file in any format + source links).
+- **Eligibility Matcher** — Logged-in users fill a one-time profile and instantly see which schemes they qualify for. If the system says "not eligible" but they believe they qualify, they can raise a private eligibility dispute for an admin to review.
 - **Profile change approvals** — Profile edits create change requests that an admin reviews and approves/rejects.
 - **Complaints** — Residents file civic complaints (category, ward, optional photo); a public **anonymous** board shows everyone the issues and their status, while admins track them to resolution with an audit trail. Ward defaults from the user's profile, and each complaint shows who is responsible.
 - **Officials directory** — A public, hierarchical "who's responsible" page (by ward and department, with contact details), maintained by admins.
 - **Admin panel** — Manage schemes, review change requests and documents, track complaints, and view users.
 - **White-label** — Any village can deploy its own instance; scheme data is shared, user data is local.
+
+## Feature mind map
+
+A bird's-eye view of everything the platform does. Items marked `(planned)` are
+on the roadmap (see `ENHANCEMENTS.md`); everything else is built.
+
+```
+barloni-gram-seva
+│
+├── 👤 Residents (public + logged-in)
+│   ├── Schemes
+│   │   ├── Browse & search directory ............ no login needed
+│   │   ├── Scheme detail ........................ eligibility rules + required docs
+│   │   ├── Sources & references ................. GR file (any format) + official links, public
+│   │   ├── "My schemes" ......................... auto-matched to profile, shows missing docs
+│   │   └── Eligibility dispute .................. "I think I qualify" when system says no
+│   │                                              (private complaint, admin reviews)
+│   ├── Account & profile
+│   │   ├── Sign up / log in ..................... mobile + password (bcrypt)
+│   │   ├── One-time profile ..................... name, mobile, ward_no
+│   │   ├── Edit profile ......................... goes to admin as a change request;
+│   │   │                                          current profile stays live until approved
+│   │   ├── Change own password .................. /account
+│   │   └── Share profile ........................ WhatsApp (profile + approved docs)
+│   ├── Documents (locker)
+│   │   ├── Upload many at once .................. number + photo/scan
+│   │   ├── Admin approval ....................... reused across every scheme
+│   │   ├── View / download ...................... owner-only, friendly names, no PII in path
+│   │   └── WhatsApp share ....................... approved docs only
+│   └── Complaints
+│       ├── File a complaint ..................... category, ward, description, optional photo
+│       ├── Public board ......................... ANONYMOUS (filer hidden from public)
+│       ├── Track status ......................... submitted→acknowledged→in progress→resolved
+│       ├── Withdraw ............................. while still "submitted"
+│       ├── Status notifications ................. in-app banner + "Updated" badge
+│       └── Who's responsible .................... shows officials for the ward/department
+│
+├── 🛠️ Admins
+│   ├── Dashboard ............................... pending requests, docs, open complaints at a glance
+│   ├── Schemes ................................. add / edit / delete (structured rules + docs)
+│   ├── Change requests ......................... approve / reject profile edits (ask for docs)
+│   ├── Document approvals ...................... approve / reject / approve-all
+│   ├── Complaints .............................. status flow + notes + audit trail
+│   │   └── Ward analytics ...................... totals, by category/ward/status, ward×category matrix
+│   ├── Officials directory ..................... CRUD + public hierarchy + CSV import/export
+│   ├── Users .................................. roles, activate/deactivate, delete, reset password
+│   │                                            (last admin protected)
+│   ├── Data .................................... bulk CSV import/export (users, schemes, officials)
+│   ├── Activity log ............................ who did what, when
+│   └── Help / tour ............................. role-aware walkthrough
+│
+├── 👑 Superadmin & approval engine
+│   ├── Roles .................................. user < admin < superadmin
+│   ├── Bootstrap .............................. .env ADMIN account auto-promoted at startup
+│   ├── Approval policy ........................ per-action: none / 2 admins / 3 admins / superadmin
+│   ├── Deferred execution ..................... gated action stored as pending request,
+│   │                                            runs only once approved
+│   ├── Approvals queue ........................ review & vote; N distinct approvers; reject kills it
+│   ├── Superadmin override .................... a superadmin vote satisfies any policy
+│   └── Wired actions .......................... user delete/role/active/reset-password, scheme delete
+│       └── (planned) ........................... content edits + unified resident flows
+│
+├── 🔒 Security (internet-facing)
+│   ├── Rate limiting / lockout ................ per-account (8) + per-IP (40) / 5 min; signup + complaint
+│   ├── Security headers ....................... CSP, X-Frame-Options DENY, nosniff, Referrer-Policy
+│   ├── Session cookies ........................ HttpOnly, SameSite, Secure flag
+│   ├── Hardening .............................. open-redirect guard, CSV formula-injection neutralised
+│   ├── Access control ......................... auth-gated docs (owner/admin), inactive users rejected
+│   └── serve-prod.sh .......................... refuses to start with default creds
+│
+├── 🌐 White-label & deploy
+│   ├── Per-village instance ................... shared scheme data, local user data
+│   ├── Branding ............................... village/app name from .env
+│   ├── One-click start ........................ start.py / start.sh / start.bat
+│   └── Production launcher ..................... serve-prod.sh + reverse proxy + TLS
+│
+└── 🧪 Quality
+    ├── Security checks ........................ in-process TestClient
+    ├── Functional checks ...................... in-process TestClient
+    ├── API e2e checks ......................... real HTTP server (httpx)
+    └── ~336 checks ............................ python tests/run_tests.py
+```
 
 ## Prerequisites
 
