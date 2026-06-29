@@ -409,7 +409,7 @@ async def delete_document(request: Request, doc_id: int):
 
 
 @router.get("/documents/file/{doc_id}")
-async def serve_document_file(request: Request, doc_id: int):
+async def serve_document_file(request: Request, doc_id: int, download: bool = False):
     user = await require_user(request)
     doc = await user_document_service.get_user_document(doc_id)
     if not doc or not doc.get("file_path"):
@@ -420,10 +420,12 @@ async def serve_document_file(request: Request, doc_id: int):
     if not os.path.isfile(doc["file_path"]):
         return Response("File missing", status_code=404)
     # Serve with a human-readable name (storage stays a random UUID on disk).
+    # ?download=1 forces a download; otherwise it opens inline in the browser.
     owner = await user_service.get_user_by_id(doc["user_id"])
     owner_profile = user_service.get_profile(owner) if owner else None
     full_name = owner_profile.get("full_name") if owner_profile else None
     filename = _friendly_doc_filename(doc, full_name)
     return FileResponse(
-        doc["file_path"], filename=filename, content_disposition_type="inline",
+        doc["file_path"], filename=filename,
+        content_disposition_type="attachment" if download else "inline",
     )

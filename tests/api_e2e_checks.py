@@ -166,6 +166,9 @@ def run(base):
     cd = fr.headers.get("content-disposition", "")
     check("file served inline with friendly name (no UUID/PII)",
           "inline" in cd and "Aadhaar-card" in cd and "API-User" in cd)
+    dl = user.get(f"/documents/file/{doc_file_id}?download=1")
+    check("owner can download own document (attachment)",
+          dl.status_code == 200 and "attachment" in dl.headers.get("content-disposition", "").lower())
     # a different logged-in user must NOT read it
     other = new_client(base); signup(other, "nosyuser", "9000010002")
     check("other user GET that file -> 403",
