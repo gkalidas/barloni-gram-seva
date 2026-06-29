@@ -1,11 +1,13 @@
 """User routes: dashboard, profile view/edit, eligible schemes, document locker."""
 import os
+import re
 from datetime import date, datetime
 
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
 from app.auth import require_user
+from app.config import settings
 from app.services import (
     user_service, scheme_service, eligibility_service,
     document_service, user_document_service,
@@ -137,11 +139,48 @@ async def dashboard(request: Request):
     )
 
 
+def _safe_doc_filename(doc: dict) -> str:
+    """A WhatsApp-friendly file name for an approved document."""
+    base = re.sub(r"[^A-Za-z0-9]+", "_", doc.get("document_name") or "document").strip("_")
+    ext = os.path.splitext(doc.get("file_path") or "")[1] or ".dat"
+    return f"{base}{ext}"
+
+
+def _build_share(profile: dict, approved_docs: list) -> dict:
+    """Build the text + file list shared to WhatsApp from the user's profile."""
+    income = profile.get("annual_family_income") or 0
+    lines = [
+        f"*{profile.get('full_name', '')}* — {settings.VILLAGE_NAME} {settings.APP_NAME}",
+        f"Age: {profile.get('age', '')}",
+        f"Gender: {(profile.get('gender') or '').title()}",
+        f"Village: {profile.get('village', '')}, "
+        f"{profile.get('district', '')}, {profile.get('state', '')}",
+        f"Caste: {(profile.get('caste_category') or '').upper()}",
+        f"Occupation: {(profile.get('occupation') or '').replace('_', ' ').title()}",
+        f"Annual family income: ₹{income:,.0f}",
+        f"BPL card: {'Yes' if profile.get('bpl_card') else 'No'}",
+    ]
+    if approved_docs:
+        lines.append("")
+        lines.append("Approved documents:")
+        for d in approved_docs:
+            num = f" — {d['doc_number']}" if d.get("doc_number") else ""
+            lines.append(f"• {d['document_name']}{num}")
+    files = [
+        {"url": f"/documents/file/{d['id']}", "name": _safe_doc_filename(d)}
+        for d in approved_docs if d.get("file_path")
+    ]
+    return {"text": "\n".join(lines), "files": files}
+
+
 @router.get("/profile", response_class=HTMLResponse)
 async def view_profile(request: Request):
     user = await require_user(request)
     profile = user_service.get_profile(user)
     pending_profile = user_service.get_pending_profile(user)
+    all_docs = await user_document_service.list_user_documents(user["id"])
+    approved_docs = [d for d in all_docs if d["status"] == "approved"]
+    share_data = _build_share(profile, approved_docs) if profile else None
     return _templates(request).TemplateResponse(request,
         "user/profile.html",
         {
@@ -151,6 +190,8 @@ async def view_profile(request: Request):
             "pending_profile": pending_profile,
             "has_pending": await user_service.has_pending_request(user["id"]),
             "change_requests": await user_service.list_user_change_requests(user["id"]),
+            "approved_docs": approved_docs,
+            "share_data": share_data,
         },
     )
 
@@ -282,45 +323,63 @@ async def documents_page(request: Request):
 
 
 @router.post("/documents", response_class=HTMLResponse)
-async def upload_document(
-    request: Request,
-    document_name: str = Form(...),
-    doc_number: str = Form(""),
-    file: UploadFile = File(...),
-):
+async def upload_document(request: Request):
+    """Upload one or many documents at once.
+
+    Each selected file is paired (by position) with a document type and an
+    optional number, so a single submit can send several documents.
+    """
     user = await require_user(request)
-    document_name = document_name.strip()
-    doc_number = doc_number.strip()
+    form = await request.form()
+    names = form.getlist("document_name")
+    numbers = form.getlist("doc_number")
+    files = [f for f in form.getlist("file") if getattr(f, "filename", None)]
 
     master_names = {d["name"] for d in await document_service.list_documents()}
-    content = await file.read()
+    max_bytes = user_document_service.MAX_FILE_BYTES
+    mb = max_bytes // (1024 * 1024)
 
-    error = None
-    if document_name not in master_names:
-        error = "Please choose a document from the list."
-    elif not file.filename or not user_document_service.is_allowed_file(file.filename):
-        error = f"File must be one of: {', '.join(sorted(user_document_service.ALLOWED_EXTENSIONS))}."
-    elif not content:
-        error = "The uploaded file is empty."
-    elif len(content) > user_document_service.MAX_FILE_BYTES:
-        mb = user_document_service.MAX_FILE_BYTES // (1024 * 1024)
-        error = f"File is too large (max {mb} MB)."
-
-    if error:
-        ctx = await _documents_context(request, user, flash=("error", error))
+    if not files:
+        ctx = await _documents_context(
+            request, user, flash=("error", "Please choose at least one file to upload."))
         return _templates(request).TemplateResponse(
-            request, "user/documents.html", ctx, status_code=400,
-        )
+            request, "user/documents.html", ctx, status_code=400)
 
-    path = user_document_service.save_file(user["id"], file.filename, content)
-    _, old_path = await user_document_service.upsert_pending(
-        user["id"], document_name, doc_number, path,
-    )
-    if old_path and old_path != path:
-        user_document_service.delete_file(old_path)
-    return RedirectResponse(
-        "/documents?msg=Document+uploaded+and+sent+for+approval", status_code=303,
-    )
+    added = 0
+    errors = []
+    for i, file in enumerate(files):
+        document_name = (names[i].strip() if i < len(names) else "")
+        doc_number = (numbers[i].strip() if i < len(numbers) else "")
+        content = await file.read()
+        label = document_name or file.filename
+
+        if document_name not in master_names:
+            errors.append(f"{label}: please choose a document type from the list.")
+        elif not user_document_service.is_allowed_file(file.filename):
+            errors.append(f"{label}: file must be one of "
+                          f"{', '.join(sorted(user_document_service.ALLOWED_EXTENSIONS))}.")
+        elif not content:
+            errors.append(f"{label}: the file is empty.")
+        elif len(content) > max_bytes:
+            errors.append(f"{label}: file is too large (max {mb} MB).")
+        else:
+            path = user_document_service.save_file(user["id"], file.filename, content)
+            _, old_path = await user_document_service.upsert_pending(
+                user["id"], document_name, doc_number, path)
+            if old_path and old_path != path:
+                user_document_service.delete_file(old_path)
+            added += 1
+
+    # All failed -> re-render with the errors. Some succeeded -> redirect with a note.
+    if added == 0:
+        ctx = await _documents_context(request, user, flash=("error", " ".join(errors)))
+        return _templates(request).TemplateResponse(
+            request, "user/documents.html", ctx, status_code=400)
+
+    msg = f"{added}+document(s)+uploaded+and+sent+for+approval"
+    if errors:
+        msg += f"+%E2%80%94+{len(errors)}+could+not+be+uploaded"
+    return RedirectResponse(f"/documents?msg={msg}", status_code=303)
 
 
 @router.post("/documents/{doc_id}/delete")

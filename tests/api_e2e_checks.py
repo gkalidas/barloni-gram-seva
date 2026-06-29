@@ -238,6 +238,55 @@ def run(base):
                    files={"file": ("users.csv", imp_csv.encode(), "text/csv")})
     check("POST import users shows added", r.status_code == 200 and ("added" in r.text.lower()))
 
+    # ---------- New features ----------
+    section("Multi-upload / approve-all / admin-tab / WhatsApp share")
+    # admin tab visibility in the nav
+    check("normal user does NOT see Admin tab",
+          'href="/admin"' not in user.get("/dashboard").text)
+    check("admin DOES see Admin tab", 'href="/admin"' in admin.get("/dashboard").text)
+
+    # upload several documents in one request (parallel document_name/doc_number/file)
+    mu = new_client(base)
+    signup(mu, "multiup", "9000010004")
+    r = mu.post(
+        "/documents",
+        data={"document_name": ["Aadhaar card", "PAN card"], "doc_number": ["A-1", "P-1"]},
+        files=[("file", ("a.png", PNG, "image/png")),
+               ("file", ("b.png", PNG, "image/png"))],
+    )
+    check("multi-upload 2 files in one POST -> 303", r.status_code == 303)
+    dp = mu.get("/documents").text
+    check("both uploaded docs listed (2)",
+          "Your documents (2)" in dp and dp.count("Pending") >= 2)
+
+    # one failing file in a batch is reported, the valid ones still go through
+    mu2 = new_client(base)
+    signup(mu2, "multiup2", "9000010005")
+    r = mu2.post(
+        "/documents",
+        data={"document_name": ["Aadhaar card", "PAN card"], "doc_number": ["", ""]},
+        files=[("file", ("ok.png", PNG, "image/png")),
+               ("file", ("bad.exe", b"MZ", "application/octet-stream"))],
+    )
+    check("partial batch (1 good, 1 bad) still 303", r.status_code == 303)
+    dp = mu2.get("/documents").text
+    check("only the valid doc was saved (1)", "Your documents (1)" in dp)
+
+    # admin: approve ALL pending at once
+    r = admin.post("/admin/document-requests/approve-all")
+    check("approve-all -> 303", r.status_code == 303)
+    pend = admin.get("/admin/document-requests?status=pending").text
+    check("no pending documents remain", "No pending" in pend)
+    check("multiup's documents now approved", mu.get("/documents").text.count("Approved") >= 2)
+
+    # WhatsApp share on profile (apifarmer has a profile + an approved Aadhaar)
+    pp = user.get("/profile").text
+    check("profile shows WhatsApp share button", 'id="waShareBtn"' in pp)
+    check("profile embeds share data with the name",
+          'id="shareData"' in pp and "API User" in pp)
+    check("share data includes approved document file link",
+          "documents/file/" in pp)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

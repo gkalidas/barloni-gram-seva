@@ -198,6 +198,21 @@ async def approve_document(doc_id: int, admin_id: int) -> bool:
         await db.close()
 
 
+async def approve_all_documents(admin_id: int) -> int:
+    """Approve every currently-pending document. Returns how many were approved."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """UPDATE user_documents SET status = 'approved', rejection_reason = NULL,
+               reviewed_by = ?, updated_at = datetime('now') WHERE status = 'pending'""",
+            (admin_id,),
+        )
+        await db.commit()
+        return cursor.rowcount or 0
+    finally:
+        await db.close()
+
+
 async def reject_document(doc_id: int, admin_id: int, reason: str) -> bool:
     db = await get_db()
     try:

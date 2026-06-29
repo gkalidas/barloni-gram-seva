@@ -106,3 +106,86 @@
         });
     });
 })();
+
+// Document locker: pick several files at once, then choose a type + number for
+// each. One row per selected file, in the same order the files are submitted.
+(function () {
+    var fileInput = document.getElementById('docFiles');
+    var rows = document.getElementById('docRows');
+    var proto = document.getElementById('docNameProto');
+    if (!fileInput || !rows || !proto) return;
+
+    fileInput.addEventListener('change', function () {
+        rows.innerHTML = '';
+        Array.prototype.forEach.call(fileInput.files, function (f) {
+            var row = document.createElement('div');
+            row.className = 'field doc-upload-row';
+
+            var name = document.createElement('div');
+            name.className = 'hint';
+            name.textContent = '📎 ' + f.name;
+
+            var sel = proto.cloneNode(true);
+            sel.removeAttribute('id');
+            sel.hidden = false;
+            sel.name = 'document_name';
+            sel.required = true;
+
+            var num = document.createElement('input');
+            num.type = 'text';
+            num.name = 'doc_number';
+            num.placeholder = 'Document number (optional)';
+            num.style.marginTop = '0.3rem';
+
+            row.appendChild(name);
+            row.appendChild(sel);
+            row.appendChild(num);
+            rows.appendChild(row);
+        });
+    });
+})();
+
+// Share profile + approved documents to WhatsApp. On mobile browsers that
+// support file sharing this attaches the document files via the native share
+// sheet (pick WhatsApp); elsewhere it opens WhatsApp with the text summary.
+(function () {
+    var btn = document.getElementById('waShareBtn');
+    var dataEl = document.getElementById('shareData');
+    if (!btn) return;
+    var data = { text: '', files: [] };
+    if (dataEl) { try { data = JSON.parse(dataEl.textContent); } catch (e) {} }
+
+    function waLink(text) {
+        return 'https://wa.me/?text=' + encodeURIComponent(text);
+    }
+
+    btn.addEventListener('click', function () {
+        if (!window.confirm('This shares your personal profile details'
+            + (data.files && data.files.length ? ' and your approved document files' : '')
+            + ' on WhatsApp. Continue?')) return;
+
+        var hasFiles = data.files && data.files.length;
+        if (!hasFiles || !navigator.canShare) {
+            window.open(waLink(data.text), '_blank');
+            return;
+        }
+
+        btn.disabled = true;
+        Promise.all(data.files.map(function (f) {
+            return fetch(f.url)
+                .then(function (r) { return r.ok ? r.blob() : null; })
+                .then(function (b) { return b ? new File([b], f.name, { type: b.type }) : null; })
+                .catch(function () { return null; });
+        })).then(function (results) {
+            var files = results.filter(Boolean);
+            if (files.length && navigator.canShare({ files: files })) {
+                return navigator.share({ text: data.text, files: files });
+            }
+            window.open(waLink(data.text), '_blank');
+        }).catch(function (e) {
+            if (e && e.name !== 'AbortError') window.open(waLink(data.text), '_blank');
+        }).finally(function () {
+            btn.disabled = false;
+        });
+    });
+})();

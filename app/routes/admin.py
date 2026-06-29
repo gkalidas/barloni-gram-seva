@@ -452,6 +452,15 @@ async def document_requests(request: Request, status: str = "pending"):
     )
 
 
+@router.post("/admin/document-requests/approve-all")
+async def approve_all_documents_route(request: Request):
+    admin = await require_admin(request)
+    count = await user_document_service.approve_all_documents(admin["id"])
+    return RedirectResponse(
+        f"/admin/document-requests?msg=Approved+{count}+document(s)", status_code=303,
+    )
+
+
 @router.post("/admin/document-requests/{doc_id}/approve")
 async def approve_document_route(request: Request, doc_id: int):
     admin = await require_admin(request)

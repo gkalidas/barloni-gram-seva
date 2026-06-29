@@ -11,6 +11,12 @@
     <a class="btn btn-sm {{ '' if status=='all' else 'btn-outline' }}" href="/admin/document-requests?status=all">All</a>
 </div>
 
+{% if requests and status == 'pending' %}
+<form method="post" action="/admin/document-requests/approve-all" data-confirm="Approve ALL pending documents at once?" style="margin-bottom:1rem">
+    <button class="btn btn-green" type="submit">✓ Approve all pending ({{ requests|length }})</button>
+</form>
+{% endif %}
+
 {% if requests %}
 <div class="table-wrap">
 <table>
