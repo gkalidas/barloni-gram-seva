@@ -134,6 +134,20 @@ CREATE TABLE IF NOT EXISTS responsible_people (
 """
 
 
+CREATE_ACTIVITY_LOG = """
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_id INTEGER,                    -- admin who acted (no FK: log outlives the user)
+    actor_username TEXT,                 -- snapshot, so it survives admin deletion
+    action TEXT NOT NULL,                -- short code, e.g. 'scheme.delete'
+    detail TEXT,                         -- human-readable description
+    target_type TEXT,
+    target_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+"""
+
+
 def _ensure_data_dir() -> None:
     """Make sure the directory that holds the SQLite file exists."""
     db_dir = os.path.dirname(settings.DATABASE_PATH)
@@ -170,6 +184,7 @@ async def init_db() -> None:
         await db.execute(CREATE_COMPLAINTS)
         await db.execute(CREATE_COMPLAINT_HISTORY)
         await db.execute(CREATE_RESPONSIBLE_PEOPLE)
+        await db.execute(CREATE_ACTIVITY_LOG)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")

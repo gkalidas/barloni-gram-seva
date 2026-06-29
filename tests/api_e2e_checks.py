@@ -520,6 +520,19 @@ def run(base):
     check("deleted user cannot log in -> 401",
           new_client(base).post("/login", data={"username": "manageme", "password": "managepw1"}).status_code == 401)
 
+    # ---------- Activity log ----------
+    section("Admin activity log")
+    act = admin.get("/admin/activity")
+    check("activity log page loads", act.status_code == 200 and "Activity Log" in act.text)
+    # earlier admin actions in this run should be recorded
+    check("activity log records a scheme deletion",
+          "scheme.delete" in act.text)
+    check("activity log records a user deletion",
+          "user.delete" in act.text and "manageme" in act.text)
+    check("activity log shows the acting admin", "admin" in act.text)
+    check("non-admin cannot view activity log -> 403",
+          user.get("/admin/activity").status_code == 403)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

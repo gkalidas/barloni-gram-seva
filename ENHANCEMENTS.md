@@ -43,8 +43,8 @@ following still need a human:
 - [x] Export user data / reports
 - [x] Delete a scheme
 - [x] Reset a user's password (recovery path, since there is no email/SMS)
-- [ ] Admin activity log (who did what, when)
-- [ ] Manage users: change role / deactivate / delete
+- [x] Admin activity log (who did what, when) — `/admin/activity`
+- [x] Manage users: change role / deactivate / delete
 
 ## Multi-language Support
 - [ ] Hindi (primary)

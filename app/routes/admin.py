@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Resp
 from app.auth import require_admin
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
-    user_document_service, complaint_service,
+    user_document_service, complaint_service, activity_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -75,6 +75,15 @@ async def admin_dashboard(request: Request):
     )
 
 
+@router.get("/admin/activity", response_class=HTMLResponse)
+async def activity_page(request: Request):
+    user = await require_admin(request)
+    entries = await activity_service.list_activity(limit=300)
+    return _templates(request).TemplateResponse(request,
+        "admin/activity.html",
+        {"request": request, "user": user, "entries": entries})
+
+
 @router.get("/admin/change-requests", response_class=HTMLResponse)
 async def change_requests(request: Request, status: str = "pending"):
     user = await require_admin(request)
@@ -120,6 +129,10 @@ async def review_change(request: Request, request_id: int):
 async def approve_change(request: Request, request_id: int):
     admin = await require_admin(request)
     ok = await user_service.approve_change_request(request_id, admin["id"])
+    if ok:
+        await activity_service.log(admin, "change_request.approve",
+                                   f"Approved change request #{request_id}",
+                                   "change_request", request_id)
     msg = "Change+request+approved" if ok else "Request+not+found+or+already+reviewed"
     return RedirectResponse(f"/admin/change-requests?msg={msg}", status_code=303)
 
@@ -140,6 +153,10 @@ async def reject_change(request: Request, request_id: int):
     ok = await user_service.reject_change_request(
         request_id, admin["id"], reason, required_documents,
     )
+    if ok:
+        await activity_service.log(admin, "change_request.reject",
+                                   f"Rejected change request #{request_id}",
+                                   "change_request", request_id)
     msg = "Change+request+rejected" if ok else "Request+not+found+or+already+reviewed"
     return RedirectResponse(f"/admin/change-requests?msg={msg}", status_code=303)
 
@@ -156,7 +173,7 @@ async def users(request: Request):
 
 @router.post("/admin/users/{user_id}/reset-password")
 async def reset_user_password(request: Request, user_id: int):
-    await require_admin(request)
+    admin = await require_admin(request)
     form = await request.form()
     new_password = (form.get("new_password") or "").strip()
     if len(new_password) < 6:
@@ -166,6 +183,8 @@ async def reset_user_password(request: Request, user_id: int):
     if target is None:
         return RedirectResponse("/admin/users?msg=User+not+found", status_code=303)
     await user_service.update_password(user_id, new_password)
+    await activity_service.log(admin, "user.reset_password",
+                               f"Reset password for {target['username']}", "user", user_id)
     return RedirectResponse(
         f"/admin/users?msg=Password+reset+for+{target['username']}", status_code=303)
 
@@ -196,6 +215,8 @@ async def set_user_role(request: Request, user_id: int):
     if role != "admin" and await _last_active_admin(target):
         return _redirect_users("Cannot+demote+the+last+admin")
     await user_service.update_role(user_id, role)
+    await activity_service.log(admin, "user.role",
+                               f"Set {target['username']} role to {role}", "user", user_id)
     return _redirect_users(f"{target['username']}+is+now+{role}")
 
 
@@ -212,6 +233,9 @@ async def set_user_active(request: Request, user_id: int):
     if not active and await _last_active_admin(target):
         return _redirect_users("Cannot+deactivate+the+last+admin")
     await user_service.set_active(user_id, active)
+    await activity_service.log(admin, "user.active",
+                               f"{'Activated' if active else 'Deactivated'} {target['username']}",
+                               "user", user_id)
     return _redirect_users(f"{target['username']}+{'activated' if active else 'deactivated'}")
 
 
@@ -231,6 +255,8 @@ async def delete_user_route(request: Request, user_id: int):
             os.remove(p)
         except OSError:
             pass
+    await activity_service.log(admin, "user.delete",
+                               f"Deleted user {target['username']}", "user", user_id)
     return _redirect_users(f"User+{target['username']}+deleted")
 
 
@@ -380,6 +406,7 @@ async def add_scheme_submit(request: Request):
             status_code=400,
         )
     await scheme_service.create_scheme(data)
+    await activity_service.log(user, "scheme.create", f"Created scheme '{data['name']}'", "scheme")
     return RedirectResponse("/admin/schemes?msg=Scheme+added", status_code=303)
 
 
@@ -424,13 +451,17 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
             status_code=400,
         )
     await scheme_service.update_scheme(scheme_id, data)
+    await activity_service.log(user, "scheme.update", f"Updated scheme '{data['name']}'", "scheme", scheme_id)
     return RedirectResponse("/admin/schemes?msg=Scheme+updated", status_code=303)
 
 
 @router.post("/admin/schemes/{scheme_id}/delete")
 async def delete_scheme_route(request: Request, scheme_id: int):
-    await require_admin(request)
+    admin = await require_admin(request)
+    scheme = await scheme_service.get_scheme(scheme_id)
     await scheme_service.delete_scheme(scheme_id)
+    name = scheme["name"] if scheme else f"#{scheme_id}"
+    await activity_service.log(admin, "scheme.delete", f"Deleted scheme '{name}'", "scheme", scheme_id)
     return RedirectResponse("/admin/schemes?msg=Scheme+deleted", status_code=303)
 
 
@@ -545,6 +576,8 @@ async def document_requests(request: Request, status: str = "pending"):
 async def approve_all_documents_route(request: Request):
     admin = await require_admin(request)
     count = await user_document_service.approve_all_documents(admin["id"])
+    await activity_service.log(admin, "document.approve_all",
+                               f"Approved {count} pending document(s)")
     return RedirectResponse(
         f"/admin/document-requests?msg=Approved+{count}+document(s)", status_code=303,
     )
@@ -554,6 +587,9 @@ async def approve_all_documents_route(request: Request):
 async def approve_document_route(request: Request, doc_id: int):
     admin = await require_admin(request)
     ok = await user_document_service.approve_document(doc_id, admin["id"])
+    if ok:
+        await activity_service.log(admin, "document.approve",
+                                   f"Approved document #{doc_id}", "document", doc_id)
     msg = "Document+approved" if ok else "Document+not+found+or+already+reviewed"
     return RedirectResponse(f"/admin/document-requests?msg={msg}", status_code=303)
 
@@ -570,5 +606,8 @@ async def reject_document_route(
             status_code=303,
         )
     ok = await user_document_service.reject_document(doc_id, admin["id"], reason)
+    if ok:
+        await activity_service.log(admin, "document.reject",
+                                   f"Rejected document #{doc_id}", "document", doc_id)
     msg = "Document+rejected" if ok else "Document+not+found+or+already+reviewed"
     return RedirectResponse(f"/admin/document-requests?msg={msg}", status_code=303)
