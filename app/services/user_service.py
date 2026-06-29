@@ -93,12 +93,25 @@ async def set_active(user_id: int, active: bool) -> None:
         await db.close()
 
 
+async def set_password_hash(user_id: int, password_hash: str) -> None:
+    """Set an already-hashed password (used by the deferred approval engine)."""
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?",
+            (password_hash, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
 async def count_admins() -> int:
-    """Number of active admin accounts (for last-admin protection)."""
+    """Number of active admins/superadmins (for last-admin protection)."""
     db = await get_db()
     try:
         cursor = await db.execute(
-            "SELECT COUNT(*) AS c FROM users WHERE role = 'admin' AND active = 1"
+            "SELECT COUNT(*) AS c FROM users WHERE role IN ('admin','superadmin') AND active = 1"
         )
         row = await cursor.fetchone()
     finally:

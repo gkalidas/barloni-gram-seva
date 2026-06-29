@@ -48,7 +48,7 @@
     </div>
 </div>
 
-{% if user and user.role == 'admin' %}
+{% if user and user.role in ['admin', 'superadmin'] %}
 <h2 style="margin-top:1.6rem">For admins</h2>
 <div class="grid grid-2">
     <div class="card">
@@ -92,6 +92,14 @@
         <div class="inline-actions">
             <a class="btn btn-sm btn-outline" href="/admin/data">Import / export</a>
             <a class="btn btn-sm btn-outline" href="/admin/activity">Activity log</a>
+        </div>
+    </div>
+    <div class="card">
+        <h3>Approvals{% if user.role == 'superadmin' %} &amp; policy{% endif %}</h3>
+        <p class="muted">Some actions can require approval before they take effect. Review and vote in the approvals queue.{% if user.role == 'superadmin' %} As superadmin, you decide in the policy which actions need one admin, multiple admins, or a superadmin.{% endif %}</p>
+        <div class="inline-actions">
+            <a class="btn btn-sm btn-outline" href="/admin/approvals">Approvals</a>
+            {% if user.role == 'superadmin' %}<a class="btn btn-sm btn-outline" href="/admin/approval-policy">Approval policy</a>{% endif %}
         </div>
     </div>
 </div>

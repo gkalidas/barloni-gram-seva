@@ -27,6 +27,10 @@
         <span class="num">{{ complaint_open_count }}</span>
         <span class="lbl">Open complaints</span>
     </a>
+    <a class="stat orange" href="/admin/approvals" style="text-decoration:none">
+        <span class="num">{{ approvals_pending }}</span>
+        <span class="lbl">Pending approvals</span>
+    </a>
 </div>
 
 <div class="grid grid-2">
@@ -67,6 +71,14 @@
         <h3>Activity log</h3>
         <p class="muted">See a trail of recent admin actions — who did what, and when.</p>
         <a class="btn" href="/admin/activity">View activity log</a>
+    </div>
+    <div class="card">
+        <h3>Approvals</h3>
+        <p class="muted">Review and vote on actions that need approval before they take effect.</p>
+        <div class="inline-actions">
+            <a class="btn" href="/admin/approvals">Approvals queue</a>
+            {% if user.role == 'superadmin' %}<a class="btn btn-outline" href="/admin/approval-policy">Approval policy</a>{% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -5,10 +5,10 @@ import os
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
-from app.auth import require_admin
+from app.auth import require_admin, hash_password
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
-    user_document_service, complaint_service, activity_service,
+    user_document_service, complaint_service, activity_service, approval_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -71,6 +71,7 @@ async def admin_dashboard(request: Request):
             "user_count": await user_service.count_users(),
             "scheme_count": await scheme_service.count_schemes(),
             "complaint_open_count": await complaint_service.count_open_complaints(),
+            "approvals_pending": await approval_service.count_pending(),
         },
     )
 
@@ -182,11 +183,13 @@ async def reset_user_password(request: Request, user_id: int):
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return RedirectResponse("/admin/users?msg=User+not+found", status_code=303)
-    await user_service.update_password(user_id, new_password)
-    await activity_service.log(admin, "user.reset_password",
-                               f"Reset password for {target['username']}", "user", user_id)
-    return RedirectResponse(
-        f"/admin/users?msg=Password+reset+for+{target['username']}", status_code=303)
+    result = await approval_service.guard(
+        admin, "user.reset_password",
+        {"user_id": user_id, "password_hash": hash_password(new_password)},
+        f"Reset password for {target['username']}")
+    return _redirect_users(
+        f"Password+reset+for+{target['username']}" if result["executed"]
+        else "Password+reset+submitted+for+approval")
 
 
 def _redirect_users(msg: str):
@@ -196,7 +199,7 @@ def _redirect_users(msg: str):
 async def _last_active_admin(target: dict) -> bool:
     """True if acting on this target would remove the last active admin."""
     return (
-        target["role"] == "admin"
+        target["role"] in ("admin", "superadmin")
         and target.get("active", 1)
         and await user_service.count_admins() <= 1
     )
@@ -212,12 +215,16 @@ async def set_user_role(request: Request, user_id: int):
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return _redirect_users("User+not+found")
+    if target["role"] == "superadmin":
+        return _redirect_users("Superadmin+role+cannot+be+changed+here")
     if role != "admin" and await _last_active_admin(target):
         return _redirect_users("Cannot+demote+the+last+admin")
-    await user_service.update_role(user_id, role)
-    await activity_service.log(admin, "user.role",
-                               f"Set {target['username']} role to {role}", "user", user_id)
-    return _redirect_users(f"{target['username']}+is+now+{role}")
+    result = await approval_service.guard(
+        admin, "user.role", {"user_id": user_id, "role": role},
+        f"Set {target['username']} role to {role}")
+    return _redirect_users(
+        f"{target['username']}+is+now+{role}" if result["executed"]
+        else "Role+change+submitted+for+approval")
 
 
 @router.post("/admin/users/{user_id}/active")
@@ -232,11 +239,12 @@ async def set_user_active(request: Request, user_id: int):
         return _redirect_users("User+not+found")
     if not active and await _last_active_admin(target):
         return _redirect_users("Cannot+deactivate+the+last+admin")
-    await user_service.set_active(user_id, active)
-    await activity_service.log(admin, "user.active",
-                               f"{'Activated' if active else 'Deactivated'} {target['username']}",
-                               "user", user_id)
-    return _redirect_users(f"{target['username']}+{'activated' if active else 'deactivated'}")
+    result = await approval_service.guard(
+        admin, "user.active", {"user_id": user_id, "active": active},
+        f"{'Activate' if active else 'Deactivate'} {target['username']}")
+    return _redirect_users(
+        f"{target['username']}+{'activated' if active else 'deactivated'}"
+        if result["executed"] else "Change+submitted+for+approval")
 
 
 @router.post("/admin/users/{user_id}/delete")
@@ -249,15 +257,12 @@ async def delete_user_route(request: Request, user_id: int):
         return _redirect_users("User+not+found")
     if await _last_active_admin(target):
         return _redirect_users("Cannot+delete+the+last+admin")
-    paths = await user_service.delete_user(user_id)
-    for p in paths:
-        try:
-            os.remove(p)
-        except OSError:
-            pass
-    await activity_service.log(admin, "user.delete",
-                               f"Deleted user {target['username']}", "user", user_id)
-    return _redirect_users(f"User+{target['username']}+deleted")
+    result = await approval_service.guard(
+        admin, "user.delete", {"user_id": user_id},
+        f"Delete user {target['username']}")
+    return _redirect_users(
+        f"User+{target['username']}+deleted" if result["executed"]
+        else "Deletion+submitted+for+approval")
 
 
 @router.get("/admin/schemes", response_class=HTMLResponse)
@@ -459,10 +464,11 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
 async def delete_scheme_route(request: Request, scheme_id: int):
     admin = await require_admin(request)
     scheme = await scheme_service.get_scheme(scheme_id)
-    await scheme_service.delete_scheme(scheme_id)
     name = scheme["name"] if scheme else f"#{scheme_id}"
-    await activity_service.log(admin, "scheme.delete", f"Deleted scheme '{name}'", "scheme", scheme_id)
-    return RedirectResponse("/admin/schemes?msg=Scheme+deleted", status_code=303)
+    result = await approval_service.guard(
+        admin, "scheme.delete", {"scheme_id": scheme_id}, f"Delete scheme '{name}'")
+    msg = "Scheme+deleted" if result["executed"] else "Deletion+submitted+for+approval"
+    return RedirectResponse(f"/admin/schemes?msg={msg}", status_code=303)
 
 
 @router.post("/admin/documents/add")

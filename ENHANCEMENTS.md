@@ -46,6 +46,8 @@ following still need a human:
 - [x] Reset a user's password (recovery path, since there is no email/SMS)
 - [x] Admin activity log (who did what, when) — `/admin/activity`
 - [x] Manage users: change role / deactivate / delete
+- [x] Superadmin role + configurable multi-level approval engine (deferred execution): per-action policy (none / N admins / superadmin), approvals queue, superadmin override. Phase 1 wires deletes + role/active/reset-password
+- [ ] Approval engine — Phase 2: gate content edits (schemes/officials/CSV) and unify the resident change-request/document/complaint flows into the same engine; in-app "your action was approved/rejected" notice to the initiator
 
 ## Multi-language Support
 - [ ] Hindi (primary)

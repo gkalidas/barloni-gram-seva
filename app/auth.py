@@ -25,6 +25,17 @@ class AdminForbidden(Exception):
     """Raised when a non-admin tries to access an admin-only route."""
 
 
+ADMIN_ROLES = ("admin", "superadmin")
+
+
+def is_admin(user: Optional[dict]) -> bool:
+    return bool(user) and user.get("role") in ADMIN_ROLES
+
+
+def is_superadmin(user: Optional[dict]) -> bool:
+    return bool(user) and user.get("role") == "superadmin"
+
+
 # Password helpers ----------------------------------------------------------
 
 def hash_password(password: str) -> str:
@@ -104,10 +115,20 @@ async def require_user(request: Request) -> dict:
 
 
 async def require_admin(request: Request) -> dict:
-    """Return the logged-in admin user or raise (redirect/forbidden)."""
+    """Return the logged-in admin (or superadmin) user, or raise."""
     user = await get_current_user(request)
     if user is None:
         raise AuthRedirect("/login?next=" + request.url.path)
-    if user.get("role") != "admin":
+    if user.get("role") not in ADMIN_ROLES:
+        raise AdminForbidden()
+    return user
+
+
+async def require_superadmin(request: Request) -> dict:
+    """Return the logged-in superadmin, or raise."""
+    user = await get_current_user(request)
+    if user is None:
+        raise AuthRedirect("/login?next=" + request.url.path)
+    if user.get("role") != "superadmin":
         raise AdminForbidden()
     return user

@@ -40,6 +40,31 @@ async def ensure_default_admin() -> None:
         await db.close()
 
 
+async def ensure_superadmin() -> None:
+    """Guarantee at least one superadmin exists (promote an admin if needed)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT id FROM users WHERE role = 'superadmin' LIMIT 1")
+        if await cursor.fetchone() is not None:
+            return
+        # Prefer the configured ADMIN_USERNAME, else the oldest admin.
+        cursor = await db.execute(
+            "SELECT id FROM users WHERE username = ? AND role = 'admin'",
+            (settings.ADMIN_USERNAME,))
+        row = await cursor.fetchone()
+        if row is None:
+            cursor = await db.execute(
+                "SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1")
+            row = await cursor.fetchone()
+        if row is not None:
+            await db.execute(
+                "UPDATE users SET role = 'superadmin' WHERE id = ?", (row["id"],))
+            await db.commit()
+    finally:
+        await db.close()
+
+
 async def load_seed_users() -> None:
     """Import users from settings.SEED_USERS_CSV if that file exists.
 
@@ -135,7 +160,9 @@ def create_app() -> FastAPI:
     templates.env.globals["asset_version"] = _asset_version()
 
     # Routers (imported here to avoid circular imports)
-    from app.routes import public, auth_routes, user, admin, complaints, officials
+    from app.routes import (
+        public, auth_routes, user, admin, complaints, officials, approvals,
+    )
 
     app.include_router(public.router)
     app.include_router(auth_routes.router)
@@ -143,12 +170,14 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(complaints.router)
     app.include_router(officials.router)
+    app.include_router(approvals.router)
 
     @app.on_event("startup")
     async def on_startup():
         warn_on_insecure_defaults()
         await init_db()
         await ensure_default_admin()
+        await ensure_superadmin()
         # Seed the master document catalogue and sample schemes on first run
         from app.services import document_service
         await document_service.seed_documents()

@@ -22,10 +22,10 @@
             <a href="/help">Help</a>
             {% if user %}
                 <a href="/dashboard">Dashboard</a>
-                {% if user.role != 'admin' %}
+                {% if user.role not in ['admin', 'superadmin'] %}
                     <a href="/documents">Documents</a>
                 {% endif %}
-                {% if user.role == 'admin' %}
+                {% if user.role in ['admin', 'superadmin'] %}
                     <a href="/admin">Admin</a>
                 {% endif %}
                 <a href="/account">Account</a>

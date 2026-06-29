@@ -148,6 +148,44 @@ CREATE TABLE IF NOT EXISTS activity_log (
 """
 
 
+CREATE_APPROVAL_POLICY = """
+CREATE TABLE IF NOT EXISTS approval_policy (
+    action_key TEXT PRIMARY KEY,
+    level TEXT NOT NULL DEFAULT 'none'   -- 'none' | '2' | '3' | 'superadmin'
+);
+"""
+
+CREATE_APPROVAL_REQUESTS = """
+CREATE TABLE IF NOT EXISTS approval_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_key TEXT NOT NULL,
+    payload TEXT,                        -- JSON of the intended change
+    detail TEXT,                         -- human-readable summary
+    status TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | rejected
+    required TEXT NOT NULL,              -- snapshot of the level at creation
+    initiated_by INTEGER,
+    initiated_by_username TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    resolved_note TEXT
+);
+"""
+
+CREATE_APPROVAL_VOTES = """
+CREATE TABLE IF NOT EXISTS approval_votes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL,
+    voter_id INTEGER,
+    voter_username TEXT,
+    voter_role TEXT,
+    vote TEXT NOT NULL DEFAULT 'approve',    -- approve | reject
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(request_id, voter_id),
+    FOREIGN KEY (request_id) REFERENCES approval_requests(id)
+);
+"""
+
+
 def _ensure_data_dir() -> None:
     """Make sure the directory that holds the SQLite file exists."""
     db_dir = os.path.dirname(settings.DATABASE_PATH)
@@ -185,6 +223,9 @@ async def init_db() -> None:
         await db.execute(CREATE_COMPLAINT_HISTORY)
         await db.execute(CREATE_RESPONSIBLE_PEOPLE)
         await db.execute(CREATE_ACTIVITY_LOG)
+        await db.execute(CREATE_APPROVAL_POLICY)
+        await db.execute(CREATE_APPROVAL_REQUESTS)
+        await db.execute(CREATE_APPROVAL_VOTES)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")

@@ -572,6 +572,79 @@ def run(base):
     check("admin sees the admin guide", "For admins" in admin.get("/help").text)
     check("Help link in nav", "/help" in anon.get("/").text)
 
+    # ---------- Superadmin approval engine ----------
+    section("Superadmin approval engine")
+    su = admin  # the default admin is bootstrapped as the superadmin
+
+    def find_uid(uname):
+        m = re.search(r"<td>(\d+)</td>\s*<td>" + re.escape(uname) + r"</td>",
+                      su.get("/admin/users").text)
+        return int(m.group(1)) if m else None
+
+    def newest_request_id(html):
+        m = re.search(r"/admin/approvals/(\d+)/vote", html)
+        return int(m.group(1)) if m else None
+
+    check("superadmin can open approval policy",
+          su.get("/admin/approval-policy").status_code == 200)
+
+    # two helper admins (promote via the role action; default policy is 'none')
+    adminA = new_client(base); signup(adminA, "appadmin_a", "9000050001", pw="adminpw123")
+    adminB = new_client(base); signup(adminB, "appadmin_b", "9000050002", pw="adminpw123")
+    su.post(f"/admin/users/{find_uid('appadmin_a')}/role", data={"role": "admin"})
+    su.post(f"/admin/users/{find_uid('appadmin_b')}/role", data={"role": "admin"})
+    check("promoted helper admins reach /admin",
+          adminA.get("/admin").status_code == 200 and adminB.get("/admin").status_code == 200)
+    check("regular admin cannot open approval policy -> 403",
+          adminA.get("/admin/approval-policy").status_code == 403)
+
+    # policy: deleting a scheme needs a superadmin
+    su.post("/admin/approval-policy", data={"level__scheme.delete": "superadmin"})
+    su.post("/admin/schemes/add", data={"name": "Gated Scheme A", "status": "active"})
+    gsid = int(re.search(r"<td>(\d+)</td>\s*<td>Gated Scheme A", su.get("/admin/schemes").text).group(1))
+    r = adminA.post(f"/admin/schemes/{gsid}/delete")
+    check("gated scheme delete is deferred (not executed)",
+          r.status_code == 303 and "Gated Scheme A" in su.get("/admin/schemes").text)
+    reqid = newest_request_id(su.get("/admin/approvals?status=pending").text)
+    check("a pending approval request was created", reqid is not None)
+    adminB.post(f"/admin/approvals/{reqid}/vote", data={"decision": "approve"})
+    check("another admin's approval does NOT satisfy a superadmin policy",
+          "Gated Scheme A" in su.get("/admin/schemes").text)
+    su.post(f"/admin/approvals/{reqid}/vote", data={"decision": "approve"})
+    check("superadmin approval applies the deletion",
+          "Gated Scheme A" not in su.get("/admin/schemes").text)
+
+    # policy: deleting a user needs 2 distinct admins
+    su.post("/admin/approval-policy", data={"level__user.delete": "2"})
+    signup(new_client(base), "gatedvictim", "9000050003", pw="x123456")
+    vid = find_uid("gatedvictim")
+    adminA.post(f"/admin/users/{vid}/delete")  # initiator counts as approval #1
+    check("2-admin user delete is deferred", "gatedvictim" in su.get("/admin/users").text)
+    reqid2 = newest_request_id(su.get("/admin/approvals?status=pending").text)
+    adminB.post(f"/admin/approvals/{reqid2}/vote", data={"decision": "approve"})
+    check("the second admin's approval applies the delete",
+          "gatedvictim" not in su.get("/admin/users").text)
+
+    # superadmin override: a superadmin's own action executes immediately
+    signup(new_client(base), "gatedvictim2", "9000050004", pw="x123456")
+    su.post(f"/admin/users/{find_uid('gatedvictim2')}/delete")
+    check("superadmin override executes immediately",
+          "gatedvictim2" not in su.get("/admin/users").text)
+
+    # reject flow
+    su.post("/admin/approval-policy", data={"level__scheme.delete": "superadmin"})
+    su.post("/admin/schemes/add", data={"name": "Gated Scheme B", "status": "active"})
+    gsid2 = int(re.search(r"<td>(\d+)</td>\s*<td>Gated Scheme B", su.get("/admin/schemes").text).group(1))
+    adminA.post(f"/admin/schemes/{gsid2}/delete")
+    reqid3 = newest_request_id(su.get("/admin/approvals?status=pending").text)
+    su.post(f"/admin/approvals/{reqid3}/vote", data={"decision": "reject", "note": "keep it"})
+    check("a rejected request does not apply the action",
+          "Gated Scheme B" in su.get("/admin/schemes").text)
+    check("non-admin cannot view approvals -> 403",
+          user.get("/admin/approvals").status_code == 403)
+    # reset policy so later/other behaviour is unaffected
+    su.post("/admin/approval-policy", data={})
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

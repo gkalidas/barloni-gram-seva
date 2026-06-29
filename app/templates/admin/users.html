@@ -12,7 +12,8 @@
         <td>{{ u.username }}</td>
         <td>{{ u.mobile }}</td>
         <td>
-            {% if u.role == 'admin' %}<span class="pill pill-orange">Admin</span>
+            {% if u.role == 'superadmin' %}<span class="pill pill-orange">Superadmin</span>
+            {% elif u.role == 'admin' %}<span class="pill pill-orange">Admin</span>
             {% else %}<span class="pill pill-gray">User</span>{% endif %}
         </td>
         <td>
@@ -31,10 +32,12 @@
         </td>
         <td>
             <div class="inline-actions" style="flex-wrap:wrap;gap:0.3rem">
+                {% if u.role != 'superadmin' %}
                 <form method="post" action="/admin/users/{{ u.id }}/role" data-confirm="Change {{ u.username }} to {{ 'user' if u.role == 'admin' else 'admin' }}?">
                     <input type="hidden" name="role" value="{{ 'user' if u.role == 'admin' else 'admin' }}">
                     <button class="btn btn-sm btn-outline" type="submit">Make {{ 'user' if u.role == 'admin' else 'admin' }}</button>
                 </form>
+                {% endif %}
                 <form method="post" action="/admin/users/{{ u.id }}/active" data-confirm="{{ 'Deactivate' if u.active else 'Activate' }} {{ u.username }}?">
                     <input type="hidden" name="active" value="{{ '0' if u.active else '1' }}">
                     <button class="btn btn-sm" type="submit">{{ 'Deactivate' if u.active else 'Activate' }}</button>

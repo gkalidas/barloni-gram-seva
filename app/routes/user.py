@@ -6,7 +6,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
-from app.auth import require_user, verify_password
+from app.auth import require_user, verify_password, is_admin
 from app.config import settings
 from app.services import (
     user_service, scheme_service, eligibility_service,
@@ -454,7 +454,7 @@ async def serve_document_file(request: Request, doc_id: int, download: bool = Fa
     if not doc or not doc.get("file_path"):
         return Response("Not found", status_code=404)
     # Only the owner or an admin may view the file.
-    if doc["user_id"] != user["id"] and user.get("role") != "admin":
+    if doc["user_id"] != user["id"] and not is_admin(user):
         return Response("Forbidden", status_code=403)
     if not os.path.isfile(doc["file_path"]):
         return Response("File missing", status_code=404)

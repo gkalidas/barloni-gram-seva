@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Approval Policy — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Back to admin</a></p>
+<h1>Approval Policy</h1>
+<p class="muted">For each action, choose how much approval it needs before it takes effect. <strong>No approval</strong> = any admin can do it immediately. <strong>Two / Three admins</strong> = that many distinct admins must approve (the one who starts it counts as one). <strong>Superadmin</strong> = a superadmin must approve. A superadmin approval overrides any policy.</p>
+
+<div class="card">
+<form method="post" action="/admin/approval-policy">
+    {% for p in policy %}
+    <div class="field">
+        <label for="level__{{ p.action_key }}">{{ p.label }}</label>
+        <select id="level__{{ p.action_key }}" name="level__{{ p.action_key }}">
+            {% for lk, ll in levels %}<option value="{{ lk }}" {{ 'selected' if p.level == lk else '' }}>{{ ll }}</option>{% endfor %}
+        </select>
+    </div>
+    {% endfor %}
+    <button class="btn btn-green" type="submit">Save policy</button>
+</form>
+</div>
+{% endblock %}
