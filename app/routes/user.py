@@ -59,6 +59,7 @@ def _parse_profile_form(form) -> tuple:
     caste_category = (form.get("caste_category") or "").strip()
     occupation = (form.get("occupation") or "").strip()
     land_ownership = (form.get("land_ownership") or "").strip()
+    ward_no = (form.get("ward_no") or "").strip()
 
     if not full_name:
         errors.append("Full name is required.")
@@ -79,6 +80,8 @@ def _parse_profile_form(form) -> tuple:
         errors.append("Please select a valid occupation.")
     if land_ownership not in LAND_OWNERSHIP:
         errors.append("Please select a valid land ownership type.")
+    if ward_no and ward_no not in settings.COMPLAINT_WARDS:
+        errors.append("Please select a valid ward.")
 
     income = _to_float(form.get("annual_family_income"))
     if income is None or income < 0:
@@ -106,6 +109,7 @@ def _parse_profile_form(form) -> tuple:
         "occupation": occupation,
         "land_ownership": land_ownership,
         "land_area_acres": land_area,
+        "ward_no": ward_no,
         "family_size": family_size,
         "has_disability": form.get("has_disability") == "on",
         "bank_account_aadhaar_linked": form.get("bank_account_aadhaar_linked") == "on",
@@ -225,6 +229,7 @@ async def edit_profile_form(request: Request):
             "caste_categories": CASTE_CATEGORIES,
             "occupations": OCCUPATIONS,
             "land_ownership_options": LAND_OWNERSHIP,
+            "wards": settings.COMPLAINT_WARDS,
         },
     )
 
@@ -249,6 +254,7 @@ async def edit_profile_submit(request: Request):
                 "caste_categories": CASTE_CATEGORIES,
                 "occupations": OCCUPATIONS,
                 "land_ownership_options": LAND_OWNERSHIP,
+                "wards": settings.COMPLAINT_WARDS,
                 "flash": ("error", " ".join(errors)),
             },
             status_code=400,

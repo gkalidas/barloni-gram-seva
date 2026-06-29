@@ -7,7 +7,8 @@ A village-level government scheme information portal. Browse government schemes 
 - **Scheme Directory** — Anyone can browse and search government schemes (no login needed).
 - **Eligibility Matcher** — Logged-in users fill a one-time profile and instantly see which schemes they qualify for.
 - **Profile change approvals** — Profile edits create change requests that an admin reviews and approves/rejects.
-- **Complaints** — Residents file civic complaints (category, ward, optional photo); a public **anonymous** board shows everyone the issues and their status, while admins track them to resolution with an audit trail.
+- **Complaints** — Residents file civic complaints (category, ward, optional photo); a public **anonymous** board shows everyone the issues and their status, while admins track them to resolution with an audit trail. Ward defaults from the user's profile, and each complaint shows who is responsible.
+- **Officials directory** — A public, hierarchical "who's responsible" page (by ward and department, with contact details), maintained by admins.
 - **Admin panel** — Manage schemes, review change requests and documents, track complaints, and view users.
 - **White-label** — Any village can deploy its own instance; scheme data is shared, user data is local.
 

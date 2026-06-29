@@ -1,0 +1,22 @@
+{% macro official_card(o) %}
+<div class="card">
+    <div class="inline-actions" style="align-items:center;gap:0.8rem">
+        {% if o.photo_path %}
+        <img src="/officials/{{ o.id }}/photo" alt="{{ o.name }}"
+             style="width:56px;height:56px;border-radius:50%;object-fit:cover">
+        {% endif %}
+        <div>
+            <strong>{{ o.name }}</strong>{% if o.designation %} — {{ o.designation }}{% endif %}<br>
+            <span class="muted">
+                {%- if o.ward %}{{ o.ward }}{% endif -%}
+                {%- if o.ward and o.department %} · {% endif -%}
+                {%- if o.department %}{{ o.department | title }}{% endif -%}
+            </span>
+        </div>
+    </div>
+    <div class="detail-row"><div class="k">Phone</div><div class="v">{% if o.phone %}<a href="tel:{{ o.phone }}">{{ o.phone }}</a>{% else %}—{% endif %}</div></div>
+    <div class="detail-row"><div class="k">Email</div><div class="v">{% if o.email %}<a href="mailto:{{ o.email }}">{{ o.email }}</a>{% else %}—{% endif %}</div></div>
+    {% if o.office_address %}<div class="detail-row"><div class="k">Office</div><div class="v">{{ o.office_address }}</div></div>{% endif %}
+    {% if o.office_hours %}<div class="detail-row"><div class="k">Hours</div><div class="v">{{ o.office_hours }}</div></div>{% endif %}
+</div>
+{% endmacro %}

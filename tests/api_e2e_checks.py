@@ -369,6 +369,59 @@ def run(base):
     check("analytics shows category breakdown (Water)", "Water" in an.text)
     check("analytics ward x category matrix present", "Ward × category" in an.text)
 
+    # ---------- Officials & ward routing ----------
+    section("Officials, homepage CTA, ward routing")
+    home = anon.get("/").text
+    check("homepage 'Raise a Complaint' enabled",
+          'href="/complaints"' in home and "Coming Soon" not in home)
+    check("public /officials page loads", anon.get("/officials").status_code == 200)
+    check("Officials in nav", "/officials" in home)
+
+    # admin creates an official (Ward 2 / water) with a photo
+    r = admin.post("/admin/officials/add",
+                   data={"name": "Asha Devi", "designation": "Ward 2 Member", "level": "2",
+                         "ward": "Ward 2", "department": "water", "phone": "9812345678",
+                         "email": "asha@example.com", "office_address": "Panchayat Bhawan",
+                         "office_hours": "Mon-Sat 10-5"},
+                   files={"photo": ("asha.png", PNG, "image/png")})
+    check("admin add official -> 303", r.status_code == 303)
+    al = admin.get("/admin/officials").text
+    oid = first_int(r"/admin/officials/(\d+)/edit", al)
+    check("official in admin list", "Asha Devi" in al and oid is not None)
+    pub = anon.get("/officials").text
+    check("official on public page with phone + email",
+          "Asha Devi" in pub and "9812345678" in pub and "asha@example.com" in pub)
+    check("official photo served publicly",
+          anon.get(f"/officials/{oid}/photo").status_code == 200)
+    r = admin.post(f"/admin/officials/{oid}/edit",
+                   data={"name": "Asha Devi", "designation": "Senior Ward Member",
+                         "level": "2", "ward": "Ward 2", "department": "water",
+                         "phone": "9812345678", "email": "asha@example.com"})
+    check("edit official -> 303", r.status_code == 303)
+    check("edit persisted", "Senior Ward Member" in admin.get("/admin/officials").text)
+
+    # the earlier water/Ward 2 complaint now shows the responsible official
+    check("complaint detail shows responsible official",
+          "Asha Devi" in anon.get(f"/complaints/{cid}").text)
+
+    # ward defaults from the filer's profile when left blank
+    wu = new_client(base)
+    signup(wu, "warduser", "9000020009")
+    fill_profile(wu, ward_no="Ward 4")
+    check("profile shows ward + mobile",
+          "Ward 4" in wu.get("/profile").text and "9000020009" in wu.get("/profile").text)
+    r = wu.post("/complaints",
+                data={"category": "garbage", "description": "Garbage not collected for a week."})
+    wcid = first_int(r"/complaints/(\d+)", r.headers.get("location", ""))
+    check("complaint filed without ward -> 303", wcid is not None)
+    check("complaint ward defaulted from profile (Ward 4)",
+          "Ward 4" in admin.get(f"/admin/complaints/{wcid}").text)
+
+    # delete official
+    check("delete official -> 303",
+          admin.post(f"/admin/officials/{oid}/delete").status_code == 303)
+    check("official removed", "Senior Ward Member" not in admin.get("/admin/officials").text)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

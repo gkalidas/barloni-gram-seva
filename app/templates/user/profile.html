@@ -18,6 +18,8 @@
     <div class="detail-row"><div class="k">Date of birth</div><div class="v">{{ profile.date_of_birth }} (age {{ profile.age }})</div></div>
     <div class="detail-row"><div class="k">Gender</div><div class="v">{{ profile.gender | title }}</div></div>
     <div class="detail-row"><div class="k">Location</div><div class="v">{{ profile.village }}, {{ profile.district }}, {{ profile.state }}</div></div>
+    <div class="detail-row"><div class="k">Ward / area</div><div class="v">{{ profile.ward_no or '—' }}</div></div>
+    <div class="detail-row"><div class="k">Mobile number</div><div class="v">{{ user.mobile }}</div></div>
     <div class="detail-row"><div class="k">Caste category</div><div class="v">{{ profile.caste_category | upper }}</div></div>
     <div class="detail-row"><div class="k">BPL card</div><div class="v">{{ yn(profile.bpl_card) }}</div></div>
     <div class="detail-row"><div class="k">Annual family income</div><div class="v">₹{{ '{:,.0f}'.format(profile.annual_family_income or 0) }}</div></div>

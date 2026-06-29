@@ -10,7 +10,9 @@ from app.constants import (
     COMPLAINT_CATEGORIES, COMPLAINT_ADMIN_STATUSES,
 )
 from app.rate_limit import complaint_submissions
-from app.services import complaint_service, user_document_service
+from app.services import (
+    complaint_service, user_document_service, user_service, officials_service,
+)
 
 router = APIRouter()
 
@@ -40,8 +42,10 @@ async def board(request: Request, category: str = "", ward: str = "", status: st
 @router.get("/complaints/new", response_class=HTMLResponse)
 async def new_complaint_form(request: Request):
     user = await require_user(request)
+    profile = user_service.get_profile(user)
+    default_ward = (profile or {}).get("ward_no") or ""
     return _templates(request).TemplateResponse(request,
-        "complaints/new.html", _new_ctx(request, user))
+        "complaints/new.html", _new_ctx(request, user, values={"ward": default_ward}))
 
 
 def _new_ctx(request, user, values=None, flash=None):
@@ -67,6 +71,11 @@ async def create_complaint_submit(
     category = (category or "").strip()
     ward = (ward or "").strip()
     description = (description or "").strip()
+    # Ward is optional — if left blank, fall back to the filer's profile ward.
+    if not ward:
+        profile = user_service.get_profile(user)
+        if profile and profile.get("ward_no"):
+            ward = profile["ward_no"]
     values = {"category": category, "ward": ward, "description": description}
 
     def fail(msg, code=400):
@@ -142,11 +151,13 @@ async def complaint_detail(request: Request, complaint_id: int):
     is_owner = bool(user and user["id"] == complaint["user_id"])
     if is_owner and complaint.get("filer_unseen"):
         await complaint_service.mark_seen(complaint_id, user["id"])
+    responsibles = await officials_service.list_for(
+        complaint.get("ward"), complaint.get("category"))
     return _templates(request).TemplateResponse(request,
         "complaints/detail.html",
         {
             "request": request, "user": user, "complaint": complaint,
-            "history": history, "is_owner": is_owner,
+            "history": history, "is_owner": is_owner, "responsibles": responsibles,
         },
     )
 
@@ -193,11 +204,14 @@ async def admin_complaint_detail(request: Request, complaint_id: int):
     if complaint is None:
         return RedirectResponse("/admin/complaints", status_code=303)
     history = await complaint_service.list_status_history(complaint_id)
+    responsibles = await officials_service.list_for(
+        complaint.get("ward"), complaint.get("category"))
     return _templates(request).TemplateResponse(request,
         "admin/complaint_detail.html",
         {
             "request": request, "user": admin, "complaint": complaint,
             "history": history, "statuses": COMPLAINT_ADMIN_STATUSES,
+            "responsibles": responsibles,
         },
     )
 

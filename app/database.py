@@ -115,6 +115,25 @@ CREATE TABLE IF NOT EXISTS complaint_status_history (
 """
 
 
+CREATE_RESPONSIBLE_PEOPLE = """
+CREATE TABLE IF NOT EXISTS responsible_people (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    designation TEXT,
+    level INTEGER NOT NULL DEFAULT 2,    -- 1 = top of the hierarchy
+    ward TEXT,                           -- optional: responsible for this ward
+    department TEXT,                     -- optional: responsible for this category
+    phone TEXT,
+    email TEXT,
+    photo_path TEXT,
+    office_address TEXT,
+    office_hours TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+"""
+
+
 def _ensure_data_dir() -> None:
     """Make sure the directory that holds the SQLite file exists."""
     db_dir = os.path.dirname(settings.DATABASE_PATH)
@@ -150,6 +169,7 @@ async def init_db() -> None:
         await db.execute(CREATE_SCHEMES)
         await db.execute(CREATE_COMPLAINTS)
         await db.execute(CREATE_COMPLAINT_HISTORY)
+        await db.execute(CREATE_RESPONSIBLE_PEOPLE)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")

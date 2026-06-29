@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Officials — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Back to admin</a></p>
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1>Officials / Responsible People</h1>
+    <div class="inline-actions">
+        <a class="btn btn-outline" href="/officials" target="_blank">View public page</a>
+        <a class="btn btn-green" href="/admin/officials/add">Add official</a>
+    </div>
+</div>
+
+{% if officials %}
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Level</th><th>Name</th><th>Designation</th><th>Ward</th><th>Dept</th><th>Phone</th><th>Email</th><th></th></tr></thead>
+    <tbody>
+    {% for o in officials %}
+    <tr>
+        <td>{{ o.level }}</td>
+        <td>{{ o.name }}</td>
+        <td>{{ o.designation or '—' }}</td>
+        <td>{{ o.ward or '—' }}</td>
+        <td>{{ (o.department or '') | title or '—' }}</td>
+        <td>{{ o.phone or '—' }}</td>
+        <td>{{ o.email or '—' }}</td>
+        <td>
+            <div class="inline-actions">
+                <a class="btn btn-sm" href="/admin/officials/{{ o.id }}/edit">Edit</a>
+                <form method="post" action="/admin/officials/{{ o.id }}/delete" data-confirm="Remove this official?">
+                    <button class="btn btn-sm btn-red" type="submit">Delete</button>
+                </form>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card text-center"><p class="muted">No officials yet. Add the first one.</p></div>
+{% endif %}
+{% endblock %}

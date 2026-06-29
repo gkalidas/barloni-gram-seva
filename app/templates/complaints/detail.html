@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "complaints/_macros.html" import status_pill, label %}
+{% from "officials/_card.html" import official_card %}
 {% block title %}Complaint #{{ complaint.id }} — {{ village_name }} {{ app_name }}{% endblock %}
 {% block content %}
 <p><a href="/complaints">&larr; All complaints</a></p>
@@ -14,6 +15,16 @@
     <div class="detail-row"><div class="k">Photo</div><div class="v"><a href="/complaints/{{ complaint.id }}/photo" target="_blank">View photo</a></div></div>
     {% endif %}
 </div>
+
+{% if responsibles %}
+<div class="card">
+    <h3>Who is responsible</h3>
+    <p class="muted">People responsible for this ward / service — contact them directly. <a href="/officials">See all officials &rarr;</a></p>
+</div>
+<div class="grid grid-2">
+    {% for o in responsibles %}{{ official_card(o) }}{% endfor %}
+</div>
+{% endif %}
 
 {% if is_owner and complaint.status == 'submitted' %}
 <form method="post" action="/complaints/{{ complaint.id }}/withdraw" data-confirm="Withdraw this complaint?" style="margin-bottom:1rem">

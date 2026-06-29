@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "officials/_card.html" import official_card %}
+{% block title %}Who's Responsible — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Who's Responsible</h1>
+<p class="muted">Village officials and the people responsible for each ward and service. Anyone can see who is doing what — contact them directly.</p>
+
+{% if officials %}
+{% for level, group in officials | groupby('level') %}
+<h2 style="margin-top:1.4rem">Level {{ level }}</h2>
+<div class="grid grid-2">
+    {% for o in group %}{{ official_card(o) }}{% endfor %}
+</div>
+{% endfor %}
+{% else %}
+<div class="card text-center"><p class="muted">No officials have been listed yet.</p></div>
+{% endif %}
+{% endblock %}

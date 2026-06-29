@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "complaints/_macros.html" import status_pill, label %}
+{% from "officials/_card.html" import official_card %}
 {% block title %}Complaint #{{ complaint.id }} — Admin{% endblock %}
 {% block content %}
 <p><a href="/admin/complaints">&larr; All complaints</a></p>
@@ -15,6 +16,16 @@
     <div class="detail-row"><div class="k">Photo</div><div class="v"><a href="/complaints/{{ complaint.id }}/photo" target="_blank">View photo</a></div></div>
     {% endif %}
 </div>
+
+{% if responsibles %}
+<div class="card">
+    <h3>Who is responsible</h3>
+    <p class="muted">Matched by ward / department.</p>
+</div>
+<div class="grid grid-2">
+    {% for o in responsibles %}{{ official_card(o) }}{% endfor %}
+</div>
+{% endif %}
 
 <div class="card">
     <h3>Update status</h3>

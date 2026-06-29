@@ -28,6 +28,9 @@ following still need a human:
 - [x] Status-change audit trail (who changed what, when, with a note)
 - [x] Ward-level complaint analytics (totals, by category/ward/status, ward×category matrix, this-month)
 - [x] Notify the filer when their complaint status changes (in-app: dashboard banner + "Updated" badge)
+- [x] Officials / responsible-people directory: admin CRUD + public level-based hierarchy (`/officials`), linked to complaints by ward + department
+- [x] Profile `ward_no` (+ surfaced mobile); complaint ward optional, defaulting to the profile ward
+- [x] Homepage "Raise a Complaint" CTA enabled
 - [ ] Email / SMS notification on status change (needs an external provider)
 
 ## Data Collection

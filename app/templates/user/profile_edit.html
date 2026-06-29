@@ -47,6 +47,21 @@
         <input type="text" id="village" name="village" value="{{ profile.village or village_name }}" required>
     </div>
     <div class="field">
+        <label for="ward_no">Ward / area <span class="hint">(optional)</span></label>
+        <select id="ward_no" name="ward_no">
+            <option value="">Select…</option>
+            {% for w in wards %}
+            <option value="{{ w }}" {% if profile.ward_no == w %}selected{% endif %}>{{ w }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">Pre-fills the ward when you raise a complaint.</span>
+    </div>
+    <div class="field">
+        <label>Mobile number</label>
+        <input type="text" value="{{ user.mobile }}" disabled>
+        <span class="hint">Your account mobile number (used to log in). Contact an admin to change it.</span>
+    </div>
+    <div class="field">
         <label for="caste_category">Caste category</label>
         <select id="caste_category" name="caste_category" required>
             <option value="">Select…</option>

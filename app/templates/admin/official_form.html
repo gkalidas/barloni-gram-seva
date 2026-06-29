@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if official and official.id else 'Add' }} Official — Admin{% endblock %}
+{% block content %}
+{% set o = official or {} %}
+<p><a href="/admin/officials">&larr; Back to officials</a></p>
+<h1>{{ 'Edit' if o.get('id') else 'Add' }} official</h1>
+
+<div class="card">
+<form method="post" action="{{ action }}" enctype="multipart/form-data">
+    <div class="field">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required value="{{ o.get('name') or '' }}">
+    </div>
+    <div class="field">
+        <label for="designation">Designation</label>
+        <input type="text" id="designation" name="designation" placeholder="e.g. Sarpanch, Ward Member, Water Dept" value="{{ o.get('designation') or '' }}">
+    </div>
+    <div class="field">
+        <label for="level">Hierarchy level <span class="hint">(1 = top)</span></label>
+        <input type="number" id="level" name="level" min="1" value="{{ o.get('level') or 2 }}">
+    </div>
+    <div class="field">
+        <label for="ward">Ward / area <span class="hint">(optional)</span></label>
+        <select id="ward" name="ward">
+            <option value="">— none —</option>
+            {% for w in wards %}<option value="{{ w }}" {{ 'selected' if o.get('ward')==w else '' }}>{{ w }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label for="department">Department / category <span class="hint">(optional)</span></label>
+        <select id="department" name="department">
+            <option value="">— none —</option>
+            {% for d in departments %}<option value="{{ d }}" {{ 'selected' if o.get('department')==d else '' }}>{{ d | title }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="field">
+        <label for="phone">Phone</label>
+        <input type="text" id="phone" name="phone" value="{{ o.get('phone') or '' }}">
+    </div>
+    <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{ o.get('email') or '' }}">
+    </div>
+    <div class="field">
+        <label for="office_address">Office address</label>
+        <input type="text" id="office_address" name="office_address" value="{{ o.get('office_address') or '' }}">
+    </div>
+    <div class="field">
+        <label for="office_hours">Office hours</label>
+        <input type="text" id="office_hours" name="office_hours" placeholder="e.g. Mon–Sat, 10am–5pm" value="{{ o.get('office_hours') or '' }}">
+    </div>
+    <div class="field">
+        <label for="photo">Photo <span class="hint">(optional)</span></label>
+        {% if o.get('photo_path') %}<div><img src="/officials/{{ o.get('id') }}/photo" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:0.4rem"><br><span class="hint">Upload a new file to replace the current photo.</span></div>{% endif %}
+        <input type="file" id="photo" name="photo" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf">
+    </div>
+    <button class="btn btn-green btn-block" type="submit">{{ 'Save changes' if o.get('id') else 'Add official' }}</button>
+</form>
+</div>
+{% endblock %}
