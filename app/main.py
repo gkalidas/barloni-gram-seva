@@ -100,6 +100,18 @@ _SECURITY_HEADERS = {
 }
 
 
+def _asset_version() -> str:
+    """A token derived from the static asset mtimes, for cache-busting."""
+    paths = [
+        os.path.join(STATIC_DIR, "js", "main.js"),
+        os.path.join(STATIC_DIR, "css", "style.css"),
+    ]
+    try:
+        return str(int(max(os.path.getmtime(p) for p in paths)))
+    except OSError:
+        return "1"
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="barloni-gram-seva")
 
@@ -118,6 +130,9 @@ def create_app() -> FastAPI:
     # Expose common values to all templates
     templates.env.globals["village_name"] = settings.VILLAGE_NAME
     templates.env.globals["app_name"] = settings.APP_NAME
+    # Cache-busting token for static assets — changes whenever the CSS/JS change,
+    # so browsers fetch fresh files after an update instead of a stale copy.
+    templates.env.globals["asset_version"] = _asset_version()
 
     # Routers (imported here to avoid circular imports)
     from app.routes import public, auth_routes, user, admin

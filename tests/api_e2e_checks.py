@@ -98,7 +98,10 @@ def run(base):
     # ---------- Public browse (anonymous) ----------
     section("Public API (anonymous)")
     anon = new_client(base)
-    check("GET / -> 200", anon.get("/").status_code == 200)
+    home = anon.get("/")
+    check("GET / -> 200", home.status_code == 200)
+    check("static assets are cache-busted (?v=)",
+          "main.js?v=" in home.text and "style.css?v=" in home.text)
     r = anon.get("/schemes")
     check("GET /schemes lists schemes", r.status_code == 200 and "PM-KISAN" in r.text)
     r = anon.get("/schemes", params={"q": "MGNREGA"})

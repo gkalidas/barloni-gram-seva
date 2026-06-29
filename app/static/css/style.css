@@ -345,3 +345,10 @@ fieldset.rules legend {
     color: var(--muted);
     padding: 0.4rem 0;
 }
+
+/* Document locker: separate each upload row */
+.doc-row + .doc-row {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--border, #d8dee4);
+}

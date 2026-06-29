@@ -12,38 +12,34 @@
 
 <div class="card">
     <h3>Add or update documents</h3>
-    <p class="hint">You can select several files at once — then pick the document type (and number) for each. Re-uploading a document replaces the old one and sends it for approval again.</p>
+    <p class="hint">Pick the document type, add its number (optional) and choose a clear photo or scan. Use “Add another document” to upload several at once. Re-uploading a document replaces the old one and sends it for approval again.</p>
     <form method="post" action="/documents" enctype="multipart/form-data" id="docUploadForm">
-        <div class="field">
-            <label for="docFiles">Photos or scans</label>
-            <input type="file" id="docFiles" name="file" multiple accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" required>
-            <span class="hint">Allowed: {{ allowed_ext }} · up to {{ max_mb }} MB each.</span>
+        <div id="docRows">
+            <div class="doc-row">
+                <div class="field">
+                    <label>Document type</label>
+                    <select name="document_name" required>
+                        <option value="">Select…</option>
+                        {% for d in master %}
+                        <option value="{{ d.name }}">{{ d.name }}{% if d.name in have %} (re-upload){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Document number <span class="hint">(optional)</span></label>
+                    <input type="text" name="doc_number" placeholder="e.g. Aadhaar / account number">
+                </div>
+                <div class="field">
+                    <label>Photo or scan</label>
+                    <input type="file" name="file" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf" required>
+                    <span class="hint">Allowed: {{ allowed_ext }} · up to {{ max_mb }} MB.</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Hidden prototype select, cloned by JS for each chosen file -->
-        <select id="docNameProto" hidden>
-            <option value="">Select document type…</option>
-            {% for d in master %}
-            <option value="{{ d.name }}">{{ d.name }}{% if d.name in have %} (re-upload){% endif %}</option>
-            {% endfor %}
-        </select>
-
-        <div id="docRows"></div>
-
-        <!-- Fallback for no-JS: a single document type + number -->
-        <noscript>
-            <div class="field">
-                <label for="document_name">Document type</label>
-                <select id="document_name" name="document_name">
-                    <option value="">Select…</option>
-                    {% for d in master %}<option value="{{ d.name }}">{{ d.name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="field">
-                <label for="doc_number">Document number (optional)</label>
-                <input type="text" id="doc_number" name="doc_number">
-            </div>
-        </noscript>
+        <div class="inline-actions" style="margin:0.6rem 0">
+            <button type="button" class="btn btn-sm btn-outline" id="addDocRowBtn">+ Add another document</button>
+        </div>
 
         <button class="btn btn-green btn-block" type="submit">Upload for approval</button>
     </form>

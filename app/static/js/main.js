@@ -107,41 +107,33 @@
     });
 })();
 
-// Document locker: pick several files at once, then choose a type + number for
-// each. One row per selected file, in the same order the files are submitted.
+// Document locker: "Add another document" clones the (server-rendered) upload
+// row so several documents can be sent in one submit. The base row works
+// without JS, so uploads never depend on this script running.
 (function () {
-    var fileInput = document.getElementById('docFiles');
+    var addBtn = document.getElementById('addDocRowBtn');
     var rows = document.getElementById('docRows');
-    var proto = document.getElementById('docNameProto');
-    if (!fileInput || !rows || !proto) return;
+    if (!addBtn || !rows) return;
 
-    fileInput.addEventListener('change', function () {
-        rows.innerHTML = '';
-        Array.prototype.forEach.call(fileInput.files, function (f) {
-            var row = document.createElement('div');
-            row.className = 'field doc-upload-row';
+    addBtn.addEventListener('click', function () {
+        var first = rows.querySelector('.doc-row');
+        if (!first) return;
+        var clone = first.cloneNode(true);
+        clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+        clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
 
-            var name = document.createElement('div');
-            name.className = 'hint';
-            name.textContent = '📎 ' + f.name;
-
-            var sel = proto.cloneNode(true);
-            sel.removeAttribute('id');
-            sel.hidden = false;
-            sel.name = 'document_name';
-            sel.required = true;
-
-            var num = document.createElement('input');
-            num.type = 'text';
-            num.name = 'doc_number';
-            num.placeholder = 'Document number (optional)';
-            num.style.marginTop = '0.3rem';
-
-            row.appendChild(name);
-            row.appendChild(sel);
-            row.appendChild(num);
-            rows.appendChild(row);
-        });
+        if (!clone.querySelector('.doc-row-remove')) {
+            var wrap = document.createElement('div');
+            wrap.className = 'field';
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'btn btn-sm btn-red doc-row-remove';
+            rm.textContent = 'Remove';
+            rm.addEventListener('click', function () { clone.remove(); });
+            wrap.appendChild(rm);
+            clone.appendChild(wrap);
+        }
+        rows.appendChild(clone);
     });
 })();
 

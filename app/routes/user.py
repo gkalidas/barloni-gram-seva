@@ -340,15 +340,17 @@ async def upload_document(request: Request):
     """
     user = await require_user(request)
     form = await request.form()
+    # Each upload row submits one document_name, one doc_number and one file,
+    # so the three lists line up by position (row index).
     names = form.getlist("document_name")
     numbers = form.getlist("doc_number")
-    files = [f for f in form.getlist("file") if getattr(f, "filename", None)]
+    files = form.getlist("file")
 
     master_names = {d["name"] for d in await document_service.list_documents()}
     max_bytes = user_document_service.MAX_FILE_BYTES
     mb = max_bytes // (1024 * 1024)
 
-    if not files:
+    if not any(getattr(f, "filename", "") for f in files):
         ctx = await _documents_context(
             request, user, flash=("error", "Please choose at least one file to upload."))
         return _templates(request).TemplateResponse(
@@ -357,6 +359,10 @@ async def upload_document(request: Request):
     added = 0
     errors = []
     for i, file in enumerate(files):
+        # Skip empty file slots (e.g. an extra row left blank) without losing
+        # alignment with the name/number lists.
+        if not getattr(file, "filename", ""):
+            continue
         document_name = (names[i].strip() if i < len(names) else "")
         doc_number = (numbers[i].strip() if i < len(numbers) else "")
         content = await file.read()
