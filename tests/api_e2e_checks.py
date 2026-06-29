@@ -422,6 +422,57 @@ def run(base):
           admin.post(f"/admin/officials/{oid}/delete").status_code == 303)
     check("official removed", "Senior Ward Member" not in admin.get("/admin/officials").text)
 
+    # ---------- Account: password management ----------
+    section("Password management & scheme delete")
+    pw = new_client(base)
+    signup(pw, "pwuser", "9000030001", pw="origpass1")
+    check("GET /account -> 200", pw.get("/account").status_code == 200)
+    check("change pw with wrong current -> 400",
+          pw.post("/account/password", data={"current_password": "WRONG",
+                  "new_password": "newpass1", "confirm_password": "newpass1"}).status_code == 400)
+    check("change pw too short -> 400",
+          pw.post("/account/password", data={"current_password": "origpass1",
+                  "new_password": "123", "confirm_password": "123"}).status_code == 400)
+    check("change pw mismatch -> 400",
+          pw.post("/account/password", data={"current_password": "origpass1",
+                  "new_password": "newpass1", "confirm_password": "nope2"}).status_code == 400)
+    check("valid password change -> 303",
+          pw.post("/account/password", data={"current_password": "origpass1",
+                  "new_password": "newpass1", "confirm_password": "newpass1"}).status_code == 303)
+    check("old password rejected after change -> 401",
+          new_client(base).post("/login", data={"username": "pwuser", "password": "origpass1"}).status_code == 401)
+    check("new password works -> 303",
+          new_client(base).post("/login", data={"username": "pwuser", "password": "newpass1"}).status_code == 303)
+
+    # admin resets a user's password (recovery path, no email/SMS)
+    au = admin.get("/admin/users").text
+    m = re.search(r"<td>(\d+)</td>\s*<td>pwuser</td>", au)
+    uid = int(m.group(1)) if m else None
+    check("found pwuser id in admin users", uid is not None, au[:200])
+    check("non-admin cannot reset a password -> 403",
+          user.post(f"/admin/users/{uid}/reset-password", data={"new_password": "hacked1"}).status_code == 403)
+    check("admin reset too-short -> 303 (no change)",
+          admin.post(f"/admin/users/{uid}/reset-password", data={"new_password": "12"}).status_code == 303)
+    check("admin reset password -> 303",
+          admin.post(f"/admin/users/{uid}/reset-password", data={"new_password": "adminset9"}).status_code == 303)
+    check("user can log in with admin-set password",
+          new_client(base).post("/login", data={"username": "pwuser", "password": "adminset9"}).status_code == 303)
+
+    # ---------- Scheme delete ----------
+    admin.post("/admin/schemes/add", data={"name": "Delete Me Scheme", "status": "active"})
+    sl = admin.get("/admin/schemes").text
+    m = re.search(r"<td>(\d+)</td>\s*<td>Delete Me Scheme", sl)
+    sid_del = int(m.group(1)) if m else None
+    check("created a scheme to delete", sid_del is not None)
+    check("non-admin cannot delete scheme -> 403",
+          user.post(f"/admin/schemes/{sid_del}/delete").status_code == 403)
+    check("admin delete scheme -> 303",
+          admin.post(f"/admin/schemes/{sid_del}/delete").status_code == 303)
+    check("deleted scheme gone from admin list",
+          "Delete Me Scheme" not in admin.get("/admin/schemes").text)
+    check("deleted scheme gone from public browse",
+          "Delete Me Scheme" not in anon.get("/schemes").text)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

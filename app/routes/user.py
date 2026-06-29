@@ -6,7 +6,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
-from app.auth import require_user
+from app.auth import require_user, verify_password
 from app.config import settings
 from app.services import (
     user_service, scheme_service, eligibility_service,
@@ -303,6 +303,39 @@ async def my_schemes(request: Request):
             "schemes": eligible,
         },
     )
+
+
+# --- Account / password ----------------------------------------------------
+
+@router.get("/account", response_class=HTMLResponse)
+async def account_page(request: Request):
+    user = await require_user(request)
+    return _templates(request).TemplateResponse(request,
+        "user/account.html", {"request": request, "user": user})
+
+
+@router.post("/account/password", response_class=HTMLResponse)
+async def change_password(
+    request: Request,
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+):
+    user = await require_user(request)
+    errors = []
+    if not verify_password(current_password, user["password_hash"]):
+        errors.append("Your current password is incorrect.")
+    if len(new_password) < 6:
+        errors.append("New password must be at least 6 characters.")
+    if new_password != confirm_password:
+        errors.append("New passwords do not match.")
+    if errors:
+        return _templates(request).TemplateResponse(request,
+            "user/account.html",
+            {"request": request, "user": user, "flash": ("error", " ".join(errors))},
+            status_code=400)
+    await user_service.update_password(user["id"], new_password)
+    return RedirectResponse("/account?msg=Password+updated", status_code=303)
 
 
 # --- Document locker -------------------------------------------------------

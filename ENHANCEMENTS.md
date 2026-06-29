@@ -39,9 +39,12 @@ following still need a human:
 
 ## Admin Enhancements
 - [ ] Admin dashboard analytics: user signups over time, most-viewed schemes, eligibility distribution
-- [ ] Bulk user import via CSV
-- [ ] Export user data / reports
+- [x] Bulk user import via CSV
+- [x] Export user data / reports
+- [x] Delete a scheme
+- [x] Reset a user's password (recovery path, since there is no email/SMS)
 - [ ] Admin activity log (who did what, when)
+- [ ] Manage users: change role / deactivate / delete
 
 ## Multi-language Support
 - [ ] Hindi (primary)
@@ -72,6 +75,7 @@ following still need a human:
 - [x] Security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy)
 - [x] Secure session cookie flag (`SESSION_COOKIE_SECURE`, HttpOnly, SameSite)
 - [x] CSV formula-injection neutralised on export; open-redirect on login fixed
+- [x] Users can change their own password (`/account`); admins can reset a user's password
 - [ ] CAPTCHA for signup
 - [ ] Password strength requirements
 - [ ] HTTPS enforcement / HSTS (currently terminated at the reverse proxy)

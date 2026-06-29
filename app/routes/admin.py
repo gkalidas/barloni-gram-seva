@@ -153,6 +153,22 @@ async def users(request: Request):
     )
 
 
+@router.post("/admin/users/{user_id}/reset-password")
+async def reset_user_password(request: Request, user_id: int):
+    await require_admin(request)
+    form = await request.form()
+    new_password = (form.get("new_password") or "").strip()
+    if len(new_password) < 6:
+        return RedirectResponse(
+            "/admin/users?msg=Password+must+be+at+least+6+characters", status_code=303)
+    target = await user_service.get_user_by_id(user_id)
+    if target is None:
+        return RedirectResponse("/admin/users?msg=User+not+found", status_code=303)
+    await user_service.update_password(user_id, new_password)
+    return RedirectResponse(
+        f"/admin/users?msg=Password+reset+for+{target['username']}", status_code=303)
+
+
 @router.get("/admin/schemes", response_class=HTMLResponse)
 async def admin_schemes(request: Request):
     user = await require_admin(request)
@@ -344,6 +360,13 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
         )
     await scheme_service.update_scheme(scheme_id, data)
     return RedirectResponse("/admin/schemes?msg=Scheme+updated", status_code=303)
+
+
+@router.post("/admin/schemes/{scheme_id}/delete")
+async def delete_scheme_route(request: Request, scheme_id: int):
+    await require_admin(request)
+    await scheme_service.delete_scheme(scheme_id)
+    return RedirectResponse("/admin/schemes?msg=Scheme+deleted", status_code=303)
 
 
 @router.post("/admin/documents/add")

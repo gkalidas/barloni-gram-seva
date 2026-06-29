@@ -57,6 +57,18 @@ async def create_user(username: str, mobile: str, password: str,
         await db.close()
 
 
+async def update_password(user_id: int, new_password: str) -> None:
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?",
+            (hash_password(new_password), user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
 async def list_users() -> list:
     db = await get_db()
     try:

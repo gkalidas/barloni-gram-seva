@@ -23,6 +23,9 @@
         <td class="inline-actions">
             <a class="btn btn-sm btn-outline" href="/schemes/{{ s.id }}">View</a>
             <a class="btn btn-sm" href="/admin/schemes/{{ s.id }}/edit">Edit</a>
+            <form method="post" action="/admin/schemes/{{ s.id }}/delete" data-confirm="Delete '{{ s.name }}'? This cannot be undone.">
+                <button class="btn btn-sm btn-red" type="submit">Delete</button>
+            </form>
         </td>
     </tr>
     {% endfor %}

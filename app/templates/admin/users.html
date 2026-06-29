@@ -4,7 +4,7 @@
 <h1>Users ({{ users|length }})</h1>
 <div class="table-wrap">
 <table>
-    <thead><tr><th>#</th><th>Username</th><th>Mobile</th><th>Role</th><th>Profile</th><th>Joined</th></tr></thead>
+    <thead><tr><th>#</th><th>Username</th><th>Mobile</th><th>Role</th><th>Profile</th><th>Joined</th><th>Reset password</th></tr></thead>
     <tbody>
     {% for u in users %}
     <tr>
@@ -20,6 +20,12 @@
             {% else %}<span class="pill pill-gray">Pending</span>{% endif %}
         </td>
         <td>{{ u.created_at }}</td>
+        <td>
+            <form method="post" action="/admin/users/{{ u.id }}/reset-password" class="inline-actions" data-confirm="Reset password for {{ u.username }}? Give them the new password to log in.">
+                <input type="password" name="new_password" placeholder="New password" minlength="6" required style="min-height:36px;padding:0.3rem 0.5rem">
+                <button class="btn btn-sm" type="submit">Reset</button>
+            </form>
+        </td>
     </tr>
     {% endfor %}
     </tbody>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Account — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>Account settings</h1>
+
+<div class="card">
+    <div class="detail-row"><div class="k">Username</div><div class="v">{{ user.username }}</div></div>
+    <div class="detail-row"><div class="k">Mobile</div><div class="v">{{ user.mobile }}</div></div>
+    <div class="detail-row"><div class="k">Role</div><div class="v">{{ user.role | title }}</div></div>
+</div>
+
+<div class="card">
+    <h3>Change password</h3>
+    <form method="post" action="/account/password">
+        <div class="field">
+            <label for="current_password">Current password</label>
+            <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+        </div>
+        <div class="field">
+            <label for="new_password">New password</label>
+            <input type="password" id="new_password" name="new_password" minlength="6" required autocomplete="new-password">
+            <span class="hint">At least 6 characters.</span>
+        </div>
+        <div class="field">
+            <label for="confirm_password">Confirm new password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
+        </div>
+        <button class="btn btn-green" type="submit">Update password</button>
+    </form>
+</div>
+
+<p><a href="/dashboard">&larr; Back to dashboard</a></p>
+{% endblock %}

@@ -126,6 +126,15 @@ async def create_scheme(data: dict) -> int:
         await db.close()
 
 
+async def delete_scheme(scheme_id: int) -> None:
+    db = await get_db()
+    try:
+        await db.execute("DELETE FROM schemes WHERE id = ?", (scheme_id,))
+        await db.commit()
+    finally:
+        await db.close()
+
+
 async def update_scheme(scheme_id: int, data: dict) -> None:
     db = await get_db()
     try:
