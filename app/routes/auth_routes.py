@@ -9,7 +9,9 @@ from app.auth import (
     verify_password,
     set_session_cookie,
     clear_session_cookie,
+    password_problems,
 )
+from app.captcha import make_captcha, verify_captcha
 from app.rate_limit import (
     login_is_blocked, login_record_failure, login_reset,
     signup_attempts, client_ip,
@@ -112,8 +114,8 @@ async def signup_form(request: Request):
     user = await get_current_user(request)
     if user:
         return RedirectResponse("/dashboard", status_code=303)
-    return _templates(request).TemplateResponse(request, 
-        "auth/signup.html", {"request": request, "user": None}
+    return _templates(request).TemplateResponse(request,
+        "auth/signup.html", {"request": request, "user": None, "captcha": make_captcha()}
     )
 
 
@@ -124,34 +126,47 @@ async def signup_submit(
     mobile: str = Form(...),
     password: str = Form(...),
     confirm_password: str = Form(...),
+    captcha_token: str = Form(""),
+    captcha_answer: str = Form(""),
 ):
     ip = client_ip(request)
-    if signup_attempts.is_blocked(ip):
-        wait = signup_attempts.retry_after(ip)
+
+    def render_signup(status_code, error):
+        # Always hand out a fresh challenge when re-showing the form, since a
+        # token is single-use in spirit and may have expired.
         return _templates(request).TemplateResponse(request,
             "auth/signup.html",
             {
                 "request": request,
                 "user": None,
-                "flash": ("error",
-                          "Too many sign-up attempts from this network. Please "
-                          f"try again in about {max(1, wait // 60)} minute(s)."),
+                "flash": ("error", error),
                 "username": username,
                 "mobile": mobile,
+                "captcha": make_captcha(),
             },
-            status_code=429,
+            status_code=status_code,
         )
+
+    if signup_attempts.is_blocked(ip):
+        wait = signup_attempts.retry_after(ip)
+        return render_signup(
+            429,
+            "Too many sign-up attempts from this network. Please "
+            f"try again in about {max(1, wait // 60)} minute(s).")
 
     username = username.strip()
     mobile = mobile.strip()
-    errors = []
 
+    # Check the CAPTCHA before anything else so bots never reach validation.
+    if not verify_captcha(captcha_token, captcha_answer):
+        return render_signup(400, "Incorrect answer to the verification question. Please try again.")
+
+    errors = []
     if len(username) < 3:
         errors.append("Username must be at least 3 characters.")
     if not re.fullmatch(r"\d{10}", mobile):
         errors.append("Mobile number must be exactly 10 digits.")
-    if len(password) < 6:
-        errors.append("Password must be at least 6 characters.")
+    errors.extend(password_problems(password))
     if password != confirm_password:
         errors.append("Passwords do not match.")
 
@@ -162,17 +177,7 @@ async def signup_submit(
             errors.append("That mobile number is already registered.")
 
     if errors:
-        return _templates(request).TemplateResponse(request, 
-            "auth/signup.html",
-            {
-                "request": request,
-                "user": None,
-                "flash": ("error", " ".join(errors)),
-                "username": username,
-                "mobile": mobile,
-            },
-            status_code=400,
-        )
+        return render_signup(400, " ".join(errors))
 
     user_id = await user_service.create_user(username, mobile, password, "user")
     signup_attempts.record(ip)

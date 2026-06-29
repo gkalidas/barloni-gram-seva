@@ -6,7 +6,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
 
-from app.auth import require_user, verify_password, is_admin
+from app.auth import require_user, verify_password, is_admin, password_problems
 from app.config import settings
 from app.services import (
     user_service, scheme_service, eligibility_service,
@@ -373,8 +373,7 @@ async def change_password(
     errors = []
     if not verify_password(current_password, user["password_hash"]):
         errors.append("Your current password is incorrect.")
-    if len(new_password) < 6:
-        errors.append("New password must be at least 6 characters.")
+    errors.extend(password_problems(new_password))
     if new_password != confirm_password:
         errors.append("New passwords do not match.")
     if errors:

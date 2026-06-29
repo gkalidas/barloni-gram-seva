@@ -16,13 +16,22 @@
         </div>
         <div class="field">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" minlength="6" required>
-            <span class="hint">At least 6 characters.</span>
+            <input type="password" id="password" name="password" minlength="8" required>
+            <span class="hint">At least 8 characters, including a letter and a number.</span>
         </div>
         <div class="field">
             <label for="confirm_password">Confirm password</label>
-            <input type="password" id="confirm_password" name="confirm_password" minlength="6" required>
+            <input type="password" id="confirm_password" name="confirm_password" minlength="8" required>
         </div>
+        {% if captcha %}
+        <div class="field">
+            <label for="captcha_answer">What is <strong>{{ captcha.question }}</strong>?</label>
+            <input type="text" id="captcha_answer" name="captcha_answer" inputmode="numeric"
+                   pattern="-?\d+" autocomplete="off" required>
+            <input type="hidden" name="captcha_token" value="{{ captcha.token }}">
+            <span class="hint">A quick check to keep out spam sign-ups.</span>
+        </div>
+        {% endif %}
         <button class="btn btn-block" type="submit">Sign up</button>
     </form>
 </div>

@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
-from app.auth import require_admin, hash_password
+from app.auth import require_admin, hash_password, password_problems
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
     user_document_service, complaint_service, activity_service, approval_service,
@@ -196,9 +196,11 @@ async def reset_user_password(request: Request, user_id: int):
     admin = await require_admin(request)
     form = await request.form()
     new_password = (form.get("new_password") or "").strip()
-    if len(new_password) < 6:
+    problems = password_problems(new_password)
+    if problems:
+        from urllib.parse import quote_plus
         return RedirectResponse(
-            "/admin/users?msg=Password+must+be+at+least+6+characters", status_code=303)
+            "/admin/users?msg=" + quote_plus(" ".join(problems)), status_code=303)
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return RedirectResponse("/admin/users?msg=User+not+found", status_code=303)

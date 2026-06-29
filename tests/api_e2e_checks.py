@@ -75,9 +75,24 @@ def new_client(base):
     return httpx.Client(base_url=base, follow_redirects=False, timeout=10.0)
 
 
+def _solve_captcha(cli):
+    """GET /signup and solve its arithmetic CAPTCHA from the rendered HTML.
+
+    The server runs in a separate process with its own SECRET_KEY, so we can't
+    mint a token locally — we read the real challenge the way a browser would.
+    """
+    html = cli.get("/signup").text
+    tok = re.search(r'name="captcha_token" value="([^"]+)"', html)
+    nums = re.search(r"What is <strong>(\d+) \+ (\d+)</strong>", html)
+    if not tok or not nums:
+        return {}
+    return {"captcha_token": tok.group(1),
+            "captcha_answer": str(int(nums.group(1)) + int(nums.group(2)))}
+
 def signup(cli, u, m, pw="secret123"):
-    return cli.post("/signup", data={"username": u, "mobile": m,
-                    "password": pw, "confirm_password": pw})
+    data = {"username": u, "mobile": m, "password": pw, "confirm_password": pw}
+    data.update(_solve_captcha(cli))
+    return cli.post("/signup", data=data)
 
 def fill_profile(cli, **over):
     base = {"full_name": "API User", "date_of_birth": "1980-01-01",
@@ -619,7 +634,7 @@ def run(base):
 
     # policy: deleting a user needs 2 distinct admins
     su.post("/admin/approval-policy", data={"level__user.delete": "2"})
-    signup(new_client(base), "gatedvictim", "9000050003", pw="x123456")
+    signup(new_client(base), "gatedvictim", "9000050003", pw="x1234567")
     vid = find_uid("gatedvictim")
     adminA.post(f"/admin/users/{vid}/delete")  # initiator counts as approval #1
     check("2-admin user delete is deferred", "gatedvictim" in su.get("/admin/users").text)
@@ -629,7 +644,7 @@ def run(base):
           "gatedvictim" not in su.get("/admin/users").text)
 
     # superadmin override: a superadmin's own action executes immediately
-    signup(new_client(base), "gatedvictim2", "9000050004", pw="x123456")
+    signup(new_client(base), "gatedvictim2", "9000050004", pw="x1234567")
     su.post(f"/admin/users/{find_uid('gatedvictim2')}/delete")
     check("superadmin override executes immediately",
           "gatedvictim2" not in su.get("/admin/users").text)

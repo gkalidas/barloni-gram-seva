@@ -55,11 +55,21 @@ def login(client, username, password):
 PNG = bytes.fromhex("89504e470d0a1a0a") + b"\x00" * 64  # minimal png-ish bytes
 
 
+def _captcha_fields():
+    """Mint a valid signup CAPTCHA in-process (same SECRET_KEY as the app)."""
+    from app.captcha import make_captcha
+    ch = make_captcha()
+    a, b = ch["question"].split(" + ")
+    return {"captcha_token": ch["token"], "captcha_answer": str(int(a) + int(b))}
+
+
 def make_user(client, username, mobile, password="secret123"):
-    r = client.post("/signup", data={
+    data = {
         "username": username, "mobile": mobile,
         "password": password, "confirm_password": password,
-    }, follow_redirects=False)
+    }
+    data.update(_captcha_fields())
+    r = client.post("/signup", data=data, follow_redirects=False)
     return r
 
 

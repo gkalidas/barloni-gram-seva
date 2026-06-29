@@ -43,9 +43,17 @@ def run_async(coro): return asyncio.get_event_loop().run_until_complete(coro)
 
 PNG = bytes.fromhex("89504e470d0a1a0a") + b"\x00" * 64
 
+def captcha_fields():
+    """Mint a valid signup CAPTCHA in-process (same SECRET_KEY as the app)."""
+    from app.captcha import make_captcha
+    ch = make_captcha()
+    a, b = ch["question"].split(" + ")
+    return {"captcha_token": ch["token"], "captcha_answer": str(int(a) + int(b))}
+
 def signup(c, u, m, pw="secret123"):
-    return c.post("/signup", data={"username": u, "mobile": m,
-                  "password": pw, "confirm_password": pw}, follow_redirects=False)
+    data = {"username": u, "mobile": m, "password": pw, "confirm_password": pw}
+    data.update(captcha_fields())
+    return c.post("/signup", data=data, follow_redirects=False)
 
 def fill_profile(c, **over):
     base = {"full_name": "Test User", "date_of_birth": "1980-01-01",
@@ -109,13 +117,25 @@ def run():
         check("signup bad mobile rejected", signup(bad, "shortmob", "12345").status_code == 400)
         check("signup short password rejected",
               signup(TestClient(app), "shortpw", "9000001001", pw="123").status_code == 400)
-        r = TestClient(app).post("/signup", data={"username": "mm", "mobile": "9000001002",
-            "password": "abcdef", "confirm_password": "zzzzzz"}, follow_redirects=False)
+        mm = {"username": "mm", "mobile": "9000001002",
+              "password": "abcdef12", "confirm_password": "zzzzzz12"}
+        mm.update(captcha_fields())
+        r = TestClient(app).post("/signup", data=mm, follow_redirects=False)
         check("signup mismatched passwords rejected", r.status_code == 400)
         check("signup duplicate username rejected",
               signup(TestClient(app), "validjoe", "9000001003").status_code == 400)
         check("signup duplicate mobile rejected",
               signup(TestClient(app), "another", "9000001000").status_code == 400)
+        # CAPTCHA: a signup with a wrong/missing answer is rejected
+        wrong = {"username": "botuser", "mobile": "9000001009",
+                 "password": "secret123", "confirm_password": "secret123",
+                 "captcha_token": "0.deadbeef", "captcha_answer": "7"}
+        check("signup with bad CAPTCHA rejected",
+              TestClient(app).post("/signup", data=wrong,
+                                   follow_redirects=False).status_code == 400)
+        # password without a digit is rejected (strength rule)
+        check("signup weak password (no digit) rejected",
+              signup(TestClient(app), "nodigits", "9000001010", pw="abcdefgh").status_code == 400)
         # login / logout
         lc = TestClient(app)
         signup(lc, "loginuser", "9000001004", pw="mypass123")

@@ -51,6 +51,27 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
+# Minimum password requirements — kept modest for a low-literacy rural audience:
+# long enough to resist trivial guessing, with at least one letter and one digit.
+PASSWORD_MIN_LENGTH = 8
+
+
+def password_problems(password: str) -> list:
+    """Return a list of human-readable reasons the password is too weak.
+
+    Empty list means the password is acceptable.
+    """
+    password = password or ""
+    problems = []
+    if len(password) < PASSWORD_MIN_LENGTH:
+        problems.append(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
+    if not any(c.isalpha() for c in password):
+        problems.append("Password must include at least one letter.")
+    if not any(c.isdigit() for c in password):
+        problems.append("Password must include at least one number.")
+    return problems
+
+
 # Session cookie helpers ----------------------------------------------------
 
 def create_session(user_id: int, role: str) -> str:

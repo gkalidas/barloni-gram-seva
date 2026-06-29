@@ -83,8 +83,8 @@ following still need a human:
 - [x] Secure session cookie flag (`SESSION_COOKIE_SECURE`, HttpOnly, SameSite)
 - [x] CSV formula-injection neutralised on export; open-redirect on login fixed
 - [x] Users can change their own password (`/account`); admins can reset a user's password
-- [ ] CAPTCHA for signup
-- [ ] Password strength requirements
+- [x] CAPTCHA for signup — self-contained stateless arithmetic CAPTCHA (HMAC-signed, no external provider; pairs with per-IP signup rate limiting)
+- [x] Password strength requirements — min 8 chars incl. a letter and a number; enforced on signup, self-service change, and admin reset (`app/auth.py:password_problems`)
 - [ ] HTTPS enforcement / HSTS (currently terminated at the reverse proxy)
 - [ ] Move rate-limit + session store to Redis when scaling past one worker
 
