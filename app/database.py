@@ -251,6 +251,7 @@ async def init_db() -> None:
         await _ensure_column(db, "complaints", "scheme_id", "INTEGER")
         await _ensure_column(db, "users", "active", "INTEGER DEFAULT 1")
         await _ensure_column(db, "schemes", "views", "INTEGER DEFAULT 0")
+        await _ensure_column(db, "approval_requests", "initiator_seen", "INTEGER DEFAULT 0")
         await db.commit()
     finally:
         await db.close()

@@ -7,7 +7,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Resp
 from app.auth import require_admin, get_current_user
 from app.config import settings
 from app.constants import COMPLAINT_CATEGORIES
-from app.services import officials_service, user_document_service, import_export_service
+from app.services import (
+    officials_service, user_document_service, import_export_service, approval_service,
+)
 
 router = APIRouter()
 
@@ -158,8 +160,10 @@ async def add_official_submit(request: Request):
             _admin_ctx(request, user, data, flash=("error", " ".join(errors))),
             status_code=400)
     data["photo_path"] = photo_path
-    await officials_service.create_official(data)
-    return RedirectResponse("/admin/officials?msg=Official+added", status_code=303)
+    result = await approval_service.guard(
+        user, "official.create", {"data": data}, f"Add official '{data['name']}'")
+    msg = "Official+added" if result["executed"] else "Official+submitted+for+approval"
+    return RedirectResponse(f"/admin/officials?msg={msg}", status_code=303)
 
 
 @router.get("/admin/officials/{official_id}/edit", response_class=HTMLResponse)
@@ -197,14 +201,21 @@ async def edit_official_submit(request: Request, official_id: int):
             officials_service.delete_photo(existing["photo_path"])
     else:
         data["photo_path"] = existing.get("photo_path")
-    await officials_service.update_official(official_id, data)
-    return RedirectResponse("/admin/officials?msg=Official+updated", status_code=303)
+    result = await approval_service.guard(
+        user, "official.update", {"official_id": official_id, "data": data},
+        f"Edit official '{data['name']}'")
+    msg = "Official+updated" if result["executed"] else "Official+edit+submitted+for+approval"
+    return RedirectResponse(f"/admin/officials?msg={msg}", status_code=303)
 
 
 @router.post("/admin/officials/{official_id}/delete")
 async def delete_official_route(request: Request, official_id: int):
-    await require_admin(request)
-    photo = await officials_service.delete_official(official_id)
-    if photo:
-        officials_service.delete_photo(photo)
-    return RedirectResponse("/admin/officials?msg=Official+removed", status_code=303)
+    admin = await require_admin(request)
+    official = await officials_service.get_official(official_id)
+    if official is None:
+        return RedirectResponse("/admin/officials", status_code=303)
+    result = await approval_service.guard(
+        admin, "official.delete", {"official_id": official_id},
+        f"Remove official '{official['name']}'")
+    msg = "Official+removed" if result["executed"] else "Removal+submitted+for+approval"
+    return RedirectResponse(f"/admin/officials?msg={msg}", status_code=303)

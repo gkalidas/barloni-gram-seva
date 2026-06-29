@@ -6,6 +6,25 @@
     <a class="btn btn-sm btn-outline" href="/help">How it works</a>
 </div>
 
+{% if approval_notices %}
+<div class="card" style="border-left:4px solid var(--blue);margin-bottom:1rem">
+    <h3 style="margin-top:0">Updates on your requests</h3>
+    <ul class="clean" style="margin:0">
+        {% for n in approval_notices %}
+        <li>
+            {% if n.status == 'approved' %}
+                <span class="pill pill-green">Approved</span>
+            {% else %}
+                <span class="pill pill-orange">Rejected</span>
+            {% endif %}
+            {{ n.detail or n.label }}
+            {% if n.resolved_note %}<span class="muted">— {{ n.resolved_note }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
 <div class="stats" style="margin-bottom:1.2rem">
     <a class="stat orange" href="/admin/change-requests" style="text-decoration:none">
         <span class="num">{{ pending_count }}</span>

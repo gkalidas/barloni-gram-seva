@@ -64,7 +64,10 @@ def _validate_json(text: str, expect_type):
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
     user = await require_admin(request)
-    return _templates(request).TemplateResponse(request, 
+    # In-app outcome notices for actions this admin initiated that have since
+    # been approved/rejected by others. Shown once, then marked seen.
+    notices = await approval_service.notices_for(user["id"])
+    response = _templates(request).TemplateResponse(request,
         "admin/dashboard.html",
         {
             "request": request,
@@ -75,8 +78,12 @@ async def admin_dashboard(request: Request):
             "scheme_count": await scheme_service.count_schemes(),
             "complaint_open_count": await complaint_service.count_open_complaints(),
             "approvals_pending": await approval_service.count_pending(),
+            "approval_notices": notices,
         },
     )
+    if notices:
+        await approval_service.mark_notices_seen(user["id"])
+    return response
 
 
 @router.get("/admin/analytics", response_class=HTMLResponse)
@@ -431,9 +438,10 @@ async def add_scheme_submit(request: Request):
             ),
             status_code=400,
         )
-    await scheme_service.create_scheme(data)
-    await activity_service.log(user, "scheme.create", f"Created scheme '{data['name']}'", "scheme")
-    return RedirectResponse("/admin/schemes?msg=Scheme+added", status_code=303)
+    result = await approval_service.guard(
+        user, "scheme.create", {"data": data}, f"Add scheme '{data['name']}'")
+    msg = "Scheme+added" if result["executed"] else "Scheme+submitted+for+approval"
+    return RedirectResponse(f"/admin/schemes?msg={msg}", status_code=303)
 
 
 @router.get("/admin/schemes/{scheme_id}/edit", response_class=HTMLResponse)
@@ -478,9 +486,11 @@ async def edit_scheme_submit(request: Request, scheme_id: int):
             ),
             status_code=400,
         )
-    await scheme_service.update_scheme(scheme_id, data)
-    await activity_service.log(user, "scheme.update", f"Updated scheme '{data['name']}'", "scheme", scheme_id)
-    return RedirectResponse("/admin/schemes?msg=Scheme+updated", status_code=303)
+    result = await approval_service.guard(
+        user, "scheme.update", {"scheme_id": scheme_id, "data": data},
+        f"Edit scheme '{data['name']}'")
+    msg = "Scheme+updated" if result["executed"] else "Scheme+edit+submitted+for+approval"
+    return RedirectResponse(f"/admin/schemes?msg={msg}", status_code=303)
 
 
 @router.post("/admin/schemes/{scheme_id}/delete")

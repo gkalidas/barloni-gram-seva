@@ -51,7 +51,7 @@ following still need a human:
 - [x] Admin activity log (who did what, when) — `/admin/activity`
 - [x] Manage users: change role / deactivate / delete
 - [x] Superadmin role + configurable multi-level approval engine (deferred execution): per-action policy (none / N admins / superadmin), approvals queue, superadmin override. Phase 1 wires deletes + role/active/reset-password
-- [ ] Approval engine — Phase 2: gate content edits (schemes/officials/CSV) and unify the resident change-request/document/complaint flows into the same engine; in-app "your action was approved/rejected" notice to the initiator
+- [x] Approval engine — Phase 2 (content edits + initiator notice): scheme add/edit and official add/edit/remove now route through the approval engine; the initiating admin sees a one-time in-app "approved/rejected" notice on their dashboard. (Deferred: CSV-import gating, and folding the resident change-request/document/complaint flows into the same engine — those already have their own review UI and unifying them is a larger refactor.)
 
 ## Multi-language Support
 - [ ] Hindi (primary)

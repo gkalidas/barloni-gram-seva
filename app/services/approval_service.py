@@ -22,6 +22,12 @@ GATEABLE_ACTIONS = [
     ("user.role", "Change a user's role"),
     ("user.active", "Activate / deactivate a user"),
     ("user.reset_password", "Reset a user's password"),
+    # Phase 2 — content edits.
+    ("scheme.create", "Add a scheme"),
+    ("scheme.update", "Edit a scheme"),
+    ("official.create", "Add an official"),
+    ("official.update", "Edit an official"),
+    ("official.delete", "Remove an official"),
 ]
 ACTION_LABELS = dict(GATEABLE_ACTIONS)
 
@@ -76,28 +82,41 @@ async def list_policy() -> list:
 
 # --- the executor: performs an approved action -----------------------------
 
+def _remove_files(paths) -> None:
+    for p in paths or []:
+        if not p:
+            continue
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+
+
 async def _execute(action_key: str, payload: dict) -> None:
-    from app.services import user_service, scheme_service
+    from app.services import user_service, scheme_service, officials_service
     if action_key == "user.delete":
-        paths = await user_service.delete_user(payload["user_id"])
-        for p in paths:
-            try:
-                os.remove(p)
-            except OSError:
-                pass
+        _remove_files(await user_service.delete_user(payload["user_id"]))
     elif action_key == "scheme.delete":
-        paths = await scheme_service.delete_scheme(payload["scheme_id"])
-        for p in paths:
-            try:
-                os.remove(p)
-            except OSError:
-                pass
+        _remove_files(await scheme_service.delete_scheme(payload["scheme_id"]))
     elif action_key == "user.role":
         await user_service.update_role(payload["user_id"], payload["role"])
     elif action_key == "user.active":
         await user_service.set_active(payload["user_id"], bool(payload["active"]))
     elif action_key == "user.reset_password":
         await user_service.set_password_hash(payload["user_id"], payload["password_hash"])
+    # --- Phase 2: content edits ---
+    elif action_key == "scheme.create":
+        await scheme_service.create_scheme(payload["data"])
+    elif action_key == "scheme.update":
+        await scheme_service.update_scheme(payload["scheme_id"], payload["data"])
+    elif action_key == "official.create":
+        await officials_service.create_official(payload["data"])
+    elif action_key == "official.update":
+        await officials_service.update_official(payload["official_id"], payload["data"])
+    elif action_key == "official.delete":
+        photo = await officials_service.delete_official(payload["official_id"])
+        if photo:
+            officials_service.delete_photo(photo)
 
 
 # --- requests & votes ------------------------------------------------------
@@ -129,6 +148,11 @@ async def guard(actor: dict, action_key: str, payload: dict, detail: str) -> dic
     # The initiator's action counts as their approval.
     await _add_vote(request_id, actor, "approve")
     executed = await _resolve(request_id)
+    # If it ran straight away (e.g. a superadmin's own action satisfied the
+    # policy), the initiator already saw the outcome — don't also queue them a
+    # "your action was approved" notice.
+    if executed:
+        await _mark_seen_one(request_id)
     await _log(actor, "approval.request",
                f"Requested approval: {detail}", request_id)
     return {"executed": executed, "request_id": request_id}
@@ -268,6 +292,54 @@ async def count_pending() -> int:
     finally:
         await db.close()
     return row["c"] if row else 0
+
+
+# --- initiator notices (in-app "your action was approved/rejected") --------
+
+async def _mark_seen_one(request_id: int) -> None:
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE approval_requests SET initiator_seen = 1 WHERE id = ?",
+            (request_id,))
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def notices_for(user_id: int) -> list:
+    """Resolved requests this user initiated that they haven't been shown yet."""
+    if not user_id:
+        return []
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            """SELECT * FROM approval_requests
+               WHERE initiated_by = ? AND status IN ('approved', 'rejected')
+                 AND COALESCE(initiator_seen, 0) = 0
+               ORDER BY resolved_at DESC, id DESC""",
+            (user_id,))
+        rows = [dict(r) for r in await cursor.fetchall()]
+    finally:
+        await db.close()
+    for r in rows:
+        r["label"] = ACTION_LABELS.get(r["action_key"], r["action_key"])
+    return rows
+
+
+async def mark_notices_seen(user_id: int) -> None:
+    """Mark all of a user's resolved-request notices as seen."""
+    if not user_id:
+        return
+    db = await get_db()
+    try:
+        await db.execute(
+            """UPDATE approval_requests SET initiator_seen = 1
+               WHERE initiated_by = ? AND status IN ('approved', 'rejected')""",
+            (user_id,))
+        await db.commit()
+    finally:
+        await db.close()
 
 
 async def _log(actor, action, detail, request_id) -> None:

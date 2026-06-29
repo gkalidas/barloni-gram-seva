@@ -406,6 +406,35 @@ def run():
         check("other account unaffected during lockout", r.status_code == 303)
 
         # ---------- O. Data integrity / edge cases ----------
+        # ---------- N. Approval Phase 2 — content gating + initiator notice ----------
+        section("N. Approval Phase 2 (content gating)")
+        from app.services import approval_service as _aps
+        # The default admin is the superadmin. Create a helper admin to initiate.
+        helper = TestClient(app); signup(helper, "phase2admin", "9000009099", pw="helperpw1")
+        h = run_async(user_service.get_user_by_username("phase2admin"))
+        run_async(user_service.update_role(h["id"], "admin"))
+        run_async(_aps.set_level("scheme.create", "superadmin"))
+        # Helper adds a scheme -> must be deferred, not created.
+        helper.post("/admin/schemes/add",
+                    data={"name": "Phase2 Gated Scheme", "status": "active"},
+                    follow_redirects=False)
+        check("gated scheme.create is deferred",
+              run_async(scheme_service.get_scheme_by_name("Phase2 Gated Scheme")) is None)
+        pend = run_async(_aps.list_requests("pending"))
+        gated = [r for r in pend if r["action_key"] == "scheme.create"]
+        check("a scheme.create approval request was opened", len(gated) == 1)
+        # Superadmin approves -> scheme is created.
+        admin.post(f"/admin/approvals/{gated[0]['id']}/vote",
+                   data={"decision": "approve"}, follow_redirects=False)
+        check("approved scheme.create is applied",
+              run_async(scheme_service.get_scheme_by_name("Phase2 Gated Scheme")) is not None)
+        # Initiator sees a one-time "approved" notice on their dashboard.
+        dash = helper.get("/admin").text
+        check("initiator sees approved notice", "Updates on your requests" in dash and "Approved" in dash)
+        check("notice clears after being shown once",
+              "Updates on your requests" not in helper.get("/admin").text)
+        run_async(_aps.set_level("scheme.create", "none"))  # restore for later sections
+
         section("O. Data integrity / edge cases")
         # scheme with no rules eligible to anyone with a profile
         admin.post("/admin/schemes/add", data={"name": "Open To All", "status": "active"},
