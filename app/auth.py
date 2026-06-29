@@ -89,7 +89,10 @@ async def get_current_user(request: Request) -> Optional[dict]:
         await db.close()
     if row is None:
         return None
-    return dict(row)
+    user = dict(row)
+    if not user.get("active", 1):  # deactivated accounts are treated as logged out
+        return None
+    return user
 
 
 async def require_user(request: Request) -> dict:

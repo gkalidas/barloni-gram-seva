@@ -173,6 +173,7 @@ async def init_db() -> None:
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")
+        await _ensure_column(db, "users", "active", "INTEGER DEFAULT 1")
         await db.commit()
     finally:
         await db.close()

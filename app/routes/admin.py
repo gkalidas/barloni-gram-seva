@@ -1,5 +1,6 @@
 """Admin routes: dashboard, change request review, scheme & user management."""
 import json
+import os
 
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
@@ -167,6 +168,70 @@ async def reset_user_password(request: Request, user_id: int):
     await user_service.update_password(user_id, new_password)
     return RedirectResponse(
         f"/admin/users?msg=Password+reset+for+{target['username']}", status_code=303)
+
+
+def _redirect_users(msg: str):
+    return RedirectResponse(f"/admin/users?msg={msg}", status_code=303)
+
+
+async def _last_active_admin(target: dict) -> bool:
+    """True if acting on this target would remove the last active admin."""
+    return (
+        target["role"] == "admin"
+        and target.get("active", 1)
+        and await user_service.count_admins() <= 1
+    )
+
+
+@router.post("/admin/users/{user_id}/role")
+async def set_user_role(request: Request, user_id: int):
+    admin = await require_admin(request)
+    form = await request.form()
+    role = (form.get("role") or "").strip()
+    if role not in ("user", "admin"):
+        return _redirect_users("Invalid+role")
+    target = await user_service.get_user_by_id(user_id)
+    if target is None:
+        return _redirect_users("User+not+found")
+    if role != "admin" and await _last_active_admin(target):
+        return _redirect_users("Cannot+demote+the+last+admin")
+    await user_service.update_role(user_id, role)
+    return _redirect_users(f"{target['username']}+is+now+{role}")
+
+
+@router.post("/admin/users/{user_id}/active")
+async def set_user_active(request: Request, user_id: int):
+    admin = await require_admin(request)
+    form = await request.form()
+    active = (form.get("active") or "") == "1"
+    if user_id == admin["id"]:
+        return _redirect_users("You+cannot+change+your+own+account+status")
+    target = await user_service.get_user_by_id(user_id)
+    if target is None:
+        return _redirect_users("User+not+found")
+    if not active and await _last_active_admin(target):
+        return _redirect_users("Cannot+deactivate+the+last+admin")
+    await user_service.set_active(user_id, active)
+    return _redirect_users(f"{target['username']}+{'activated' if active else 'deactivated'}")
+
+
+@router.post("/admin/users/{user_id}/delete")
+async def delete_user_route(request: Request, user_id: int):
+    admin = await require_admin(request)
+    if user_id == admin["id"]:
+        return _redirect_users("You+cannot+delete+your+own+account")
+    target = await user_service.get_user_by_id(user_id)
+    if target is None:
+        return _redirect_users("User+not+found")
+    if await _last_active_admin(target):
+        return _redirect_users("Cannot+delete+the+last+admin")
+    paths = await user_service.delete_user(user_id)
+    for p in paths:
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+    return _redirect_users(f"User+{target['username']}+deleted")
 
 
 @router.get("/admin/schemes", response_class=HTMLResponse)

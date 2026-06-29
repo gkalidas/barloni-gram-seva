@@ -69,6 +69,80 @@ async def update_password(user_id: int, new_password: str) -> None:
         await db.close()
 
 
+async def update_role(user_id: int, role: str) -> None:
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?",
+            (role, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def set_active(user_id: int, active: bool) -> None:
+    db = await get_db()
+    try:
+        await db.execute(
+            "UPDATE users SET active = ?, updated_at = datetime('now') WHERE id = ?",
+            (1 if active else 0, user_id),
+        )
+        await db.commit()
+    finally:
+        await db.close()
+
+
+async def count_admins() -> int:
+    """Number of active admin accounts (for last-admin protection)."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT COUNT(*) AS c FROM users WHERE role = 'admin' AND active = 1"
+        )
+        row = await cursor.fetchone()
+    finally:
+        await db.close()
+    return row["c"] if row else 0
+
+
+async def delete_user(user_id: int) -> list:
+    """Hard-delete a user and all their data. Returns file paths to remove from disk.
+
+    Audit references made by this user elsewhere (who reviewed/changed something)
+    are set to NULL so other users' records stay intact.
+    """
+    db = await get_db()
+    paths = []
+    try:
+        cur = await db.execute(
+            "SELECT file_path FROM user_documents WHERE user_id = ? AND file_path IS NOT NULL",
+            (user_id,))
+        paths += [r["file_path"] for r in await cur.fetchall()]
+        cur = await db.execute(
+            "SELECT photo_path FROM complaints WHERE user_id = ? AND photo_path IS NOT NULL",
+            (user_id,))
+        paths += [r["photo_path"] for r in await cur.fetchall()]
+
+        # Detach audit references this user made on other people's records.
+        await db.execute("UPDATE complaint_status_history SET changed_by = NULL WHERE changed_by = ?", (user_id,))
+        await db.execute("UPDATE profile_change_requests SET reviewed_by = NULL WHERE reviewed_by = ?", (user_id,))
+        await db.execute("UPDATE user_documents SET reviewed_by = NULL WHERE reviewed_by = ?", (user_id,))
+
+        # Remove this user's own data (children before parents for FK safety).
+        await db.execute(
+            "DELETE FROM complaint_status_history WHERE complaint_id IN "
+            "(SELECT id FROM complaints WHERE user_id = ?)", (user_id,))
+        await db.execute("DELETE FROM complaints WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM user_documents WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM profile_change_requests WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        await db.commit()
+    finally:
+        await db.close()
+    return paths
+
+
 async def list_users() -> list:
     db = await get_db()
     try:

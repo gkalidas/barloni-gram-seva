@@ -88,6 +88,18 @@ async def login_submit(
             },
             status_code=401,
         )
+    if not user.get("active", 1):
+        return _templates(request).TemplateResponse(request,
+            "auth/login.html",
+            {
+                "request": request,
+                "user": None,
+                "next": next,
+                "flash": ("error", "Your account has been deactivated. Please contact an admin."),
+                "username": username,
+            },
+            status_code=403,
+        )
     login_reset(ip, username)
     destination = _safe_next(next)
     response = RedirectResponse(destination, status_code=303)

@@ -473,6 +473,53 @@ def run(base):
     check("deleted scheme gone from public browse",
           "Delete Me Scheme" not in anon.get("/schemes").text)
 
+    # ---------- User management ----------
+    section("User management (role / active / delete)")
+    mu = new_client(base)
+    signup(mu, "manageme", "9000040001", pw="managepw1")
+    au = admin.get("/admin/users").text
+    muid = int(re.search(r"<td>(\d+)</td>\s*<td>manageme</td>", au).group(1))
+    adminid = int(re.search(r"<td>(\d+)</td>\s*<td>admin</td>", au).group(1))
+
+    check("non-admin cannot change roles -> 403",
+          user.post(f"/admin/users/{muid}/role", data={"role": "admin"}).status_code == 403)
+
+    # promote -> user gains /admin access; demote -> loses it (role read from DB live)
+    check("promote to admin -> 303",
+          admin.post(f"/admin/users/{muid}/role", data={"role": "admin"}).status_code == 303)
+    madmin = new_client(base)
+    madmin.post("/login", data={"username": "manageme", "password": "managepw1"})
+    check("promoted user can reach /admin", madmin.get("/admin").status_code == 200)
+    check("demote to user -> 303",
+          admin.post(f"/admin/users/{muid}/role", data={"role": "user"}).status_code == 303)
+    check("demoted user loses /admin access", madmin.get("/admin").status_code == 403)
+
+    # deactivate blocks login; reactivate restores it
+    check("deactivate -> 303",
+          admin.post(f"/admin/users/{muid}/active", data={"active": "0"}).status_code == 303)
+    check("deactivated user cannot log in -> 403",
+          new_client(base).post("/login", data={"username": "manageme", "password": "managepw1"}).status_code == 403)
+    check("reactivate -> 303",
+          admin.post(f"/admin/users/{muid}/active", data={"active": "1"}).status_code == 303)
+    check("reactivated user can log in -> 303",
+          new_client(base).post("/login", data={"username": "manageme", "password": "managepw1"}).status_code == 303)
+
+    # self / last-admin guards
+    admin.post(f"/admin/users/{adminid}/active", data={"active": "0"})
+    check("admin cannot deactivate self (still works)", admin.get("/admin").status_code == 200)
+    admin.post(f"/admin/users/{adminid}/role", data={"role": "user"})
+    check("cannot demote the last admin (still admin)", admin.get("/admin").status_code == 200)
+    check("admin cannot delete self",
+          admin.post(f"/admin/users/{adminid}/delete").status_code == 303 and admin.get("/admin").status_code == 200)
+
+    # delete a user who has data (exercises the cascade cleanup)
+    mu.post("/complaints", data={"category": "roads", "description": "Pothole near manageme's home."})
+    check("delete user -> 303",
+          admin.post(f"/admin/users/{muid}/delete").status_code == 303)
+    check("deleted user gone from admin list", "manageme" not in admin.get("/admin/users").text)
+    check("deleted user cannot log in -> 401",
+          new_client(base).post("/login", data={"username": "manageme", "password": "managepw1"}).status_code == 401)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers
