@@ -563,6 +563,15 @@ def run(base):
     check("non-admin cannot view activity log -> 403",
           user.get("/admin/activity").status_code == 403)
 
+    # ---------- Help / tour ----------
+    section("Help / tour")
+    h = anon.get("/help")
+    check("public /help loads with resident guide",
+          h.status_code == 200 and "How it works" in h.text and "For residents" in h.text)
+    check("resident does not see the admin guide", "For admins" not in h.text)
+    check("admin sees the admin guide", "For admins" in admin.get("/help").text)
+    check("Help link in nav", "/help" in anon.get("/").text)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

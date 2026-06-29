@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — {{ village_name }} {{ app_name }}{% endblock %}
 {% block content %}
-<h1>Hello, {{ user.username }}</h1>
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1 style="margin:0">Hello, {{ user.username }}</h1>
+    <a class="btn btn-sm btn-outline" href="/help">New here? How it works</a>
+</div>
 
 {% if complaint_updates %}
 <div class="flash flash-info">

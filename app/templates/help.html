@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}How it works — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<h1>How it works</h1>
+<p class="muted">A quick tour of what you can do here and how to get started. {% if not user %}<a href="/signup">Create an account</a> to use the personal features.{% endif %}</p>
+
+<h2 style="margin-top:1.4rem">For residents</h2>
+<div class="grid grid-2">
+    <div class="card">
+        <h3>1. Browse schemes</h3>
+        <p class="muted">See and search government schemes — no login needed.</p>
+        <a class="btn btn-sm" href="/schemes">Browse schemes</a>
+    </div>
+    <div class="card">
+        <h3>2. Create your account</h3>
+        <p class="muted">Sign up with your mobile number and a password. You can change the password later under Account.</p>
+        {% if user %}<a class="btn btn-sm btn-outline" href="/account">Your account</a>{% else %}<a class="btn btn-sm" href="/signup">Sign up</a>{% endif %}
+    </div>
+    <div class="card">
+        <h3>3. Fill your profile (once)</h3>
+        <p class="muted">Add your details and ward. It's a one-time profile; later edits go to an admin for approval, and your current profile stays active until then.</p>
+        {% if user %}<a class="btn btn-sm" href="/profile/edit">Edit profile</a>{% endif %}
+    </div>
+    <div class="card">
+        <h3>4. See schemes you qualify for</h3>
+        <p class="muted">Based on your profile, we instantly list every scheme you are eligible for, and which documents you still need.</p>
+        {% if user %}<a class="btn btn-sm" href="/my-schemes">My schemes</a>{% endif %}
+    </div>
+    <div class="card">
+        <h3>5. Keep your documents</h3>
+        <p class="muted">Upload your documents once (number + a photo/scan). An admin approves them, then they're reused for every scheme. You can view or download them anytime.</p>
+        {% if user %}<a class="btn btn-sm" href="/documents">My documents</a>{% endif %}
+    </div>
+    <div class="card">
+        <h3>6. Raise &amp; track complaints</h3>
+        <p class="muted">Report a civic issue (water, roads, garbage…). The public board shows it <strong>anonymously</strong>; you can track its status and withdraw it while it's still new.</p>
+        <a class="btn btn-sm" href="/complaints">Complaints board</a>
+    </div>
+    <div class="card">
+        <h3>7. Know who's responsible</h3>
+        <p class="muted">See the village officials for each ward and service, with their contact details.</p>
+        <a class="btn btn-sm" href="/officials">Officials</a>
+    </div>
+    <div class="card">
+        <h3>8. Share your profile</h3>
+        <p class="muted">From your profile you can share your details and approved documents on WhatsApp with one tap.</p>
+        {% if user %}<a class="btn btn-sm btn-outline" href="/profile">My profile</a>{% endif %}
+    </div>
+</div>
+
+{% if user and user.role == 'admin' %}
+<h2 style="margin-top:1.6rem">For admins</h2>
+<div class="grid grid-2">
+    <div class="card">
+        <h3>Dashboard</h3>
+        <p class="muted">Your home base — pending change requests, documents and open complaints at a glance.</p>
+        <a class="btn btn-sm" href="/admin">Admin dashboard</a>
+    </div>
+    <div class="card">
+        <h3>Profile change requests</h3>
+        <p class="muted">Approve or reject profile edits. When rejecting, you can ask the resident for specific documents.</p>
+        <a class="btn btn-sm" href="/admin/change-requests">Review requests</a>
+    </div>
+    <div class="card">
+        <h3>Document approvals</h3>
+        <p class="muted">Review uploaded documents — approve, reject with a reason, or approve all pending at once.</p>
+        <a class="btn btn-sm" href="/admin/document-requests">Review documents</a>
+    </div>
+    <div class="card">
+        <h3>Schemes</h3>
+        <p class="muted">Add, edit or delete schemes with structured eligibility rules and required documents.</p>
+        <a class="btn btn-sm" href="/admin/schemes">Manage schemes</a>
+    </div>
+    <div class="card">
+        <h3>Complaints</h3>
+        <p class="muted">Move complaints through to resolution with notes, see the audit trail, and view ward analytics.</p>
+        <a class="btn btn-sm" href="/admin/complaints">Manage complaints</a>
+    </div>
+    <div class="card">
+        <h3>Officials</h3>
+        <p class="muted">Maintain the public who's-responsible directory (CRUD or CSV import/export).</p>
+        <a class="btn btn-sm" href="/admin/officials">Manage officials</a>
+    </div>
+    <div class="card">
+        <h3>Users</h3>
+        <p class="muted">Reset passwords, change roles, deactivate or delete accounts. The last admin is protected.</p>
+        <a class="btn btn-sm" href="/admin/users">Manage users</a>
+    </div>
+    <div class="card">
+        <h3>Import / export &amp; activity</h3>
+        <p class="muted">Bulk-load users and schemes from CSV, export your data, and review a log of admin actions.</p>
+        <div class="inline-actions">
+            <a class="btn btn-sm btn-outline" href="/admin/data">Import / export</a>
+            <a class="btn btn-sm btn-outline" href="/admin/activity">Activity log</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -20,6 +20,13 @@ async def landing(request: Request):
     )
 
 
+@router.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request):
+    user = await get_current_user(request)
+    return _templates(request).TemplateResponse(request,
+        "help.html", {"request": request, "user": user})
+
+
 @router.get("/schemes", response_class=HTMLResponse)
 async def browse_schemes(request: Request, q: str = "", category: str = ""):
     user = await get_current_user(request)

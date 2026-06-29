@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Admin — {{ village_name }} {{ app_name }}{% endblock %}
 {% block content %}
-<h1>Admin Dashboard</h1>
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1 style="margin:0">Admin Dashboard</h1>
+    <a class="btn btn-sm btn-outline" href="/help">How it works</a>
+</div>
 
 <div class="stats" style="margin-bottom:1.2rem">
     <a class="stat orange" href="/admin/change-requests" style="text-decoration:none">
