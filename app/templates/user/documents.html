@@ -62,7 +62,7 @@
                 {% else %}<span class="pill pill-red">Rejected</span>{% endif %}
                 {% if d.status == 'rejected' and d.rejection_reason %}<br><span class="muted">{{ d.rejection_reason }}</span>{% endif %}
             </td>
-            <td>{% if d.file_path %}<a href="/documents/file/{{ d.id }}" target="_blank">View</a> &middot; <a href="/documents/file/{{ d.id }}?download=1">Download</a>{% else %}—{% endif %}</td>
+            <td>{% if d.file_path %}<a href="/documents/file/{{ d.id }}" target="_blank">View</a> &middot; <a href="/documents/file/{{ d.id }}?download=1" download>Download</a>{% else %}—{% endif %}</td>
             <td>
                 <form method="post" action="/documents/{{ d.id }}/delete" data-confirm="Remove this document?">
                     <button class="btn btn-sm btn-red" type="submit">Remove</button>

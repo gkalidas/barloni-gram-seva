@@ -169,6 +169,8 @@ def run(base):
     dl = user.get(f"/documents/file/{doc_file_id}?download=1")
     check("owner can download own document (attachment)",
           dl.status_code == 200 and "attachment" in dl.headers.get("content-disposition", "").lower())
+    check("documents page has a real download link (download attr)",
+          '?download=1" download' in user.get("/documents").text)
     # a different logged-in user must NOT read it
     other = new_client(base); signup(other, "nosyuser", "9000010002")
     check("other user GET that file -> 403",
