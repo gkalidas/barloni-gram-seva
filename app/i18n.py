@@ -14,22 +14,23 @@ DEFAULT = "en"
 SUPPORTED = {
     "en": "English",
     "hi": "हिंदी",
+    "mr": "मराठी",
 }
 
 # key -> {lang_code: text}. Missing languages fall back to English.
 _STRINGS = {
-    "nav_home": {"en": "Home", "hi": "मुख्य पृष्ठ"},
-    "nav_schemes": {"en": "Schemes", "hi": "योजनाएँ"},
-    "nav_complaints": {"en": "Complaints", "hi": "शिकायतें"},
-    "nav_officials": {"en": "Officials", "hi": "अधिकारी"},
-    "nav_help": {"en": "Help", "hi": "सहायता"},
-    "nav_dashboard": {"en": "Dashboard", "hi": "डैशबोर्ड"},
-    "nav_documents": {"en": "Documents", "hi": "दस्तावेज़"},
-    "nav_admin": {"en": "Admin", "hi": "प्रशासन"},
-    "nav_account": {"en": "Account", "hi": "खाता"},
-    "nav_login": {"en": "Login", "hi": "लॉगिन"},
-    "nav_logout": {"en": "Logout", "hi": "लॉगआउट"},
-    "language": {"en": "Language", "hi": "भाषा"},
+    "nav_home": {"en": "Home", "hi": "मुख्य पृष्ठ", "mr": "मुख्यपृष्ठ"},
+    "nav_schemes": {"en": "Schemes", "hi": "योजनाएँ", "mr": "योजना"},
+    "nav_complaints": {"en": "Complaints", "hi": "शिकायतें", "mr": "तक्रारी"},
+    "nav_officials": {"en": "Officials", "hi": "अधिकारी", "mr": "अधिकारी"},
+    "nav_help": {"en": "Help", "hi": "सहायता", "mr": "मदत"},
+    "nav_dashboard": {"en": "Dashboard", "hi": "डैशबोर्ड", "mr": "डॅशबोर्ड"},
+    "nav_documents": {"en": "Documents", "hi": "दस्तावेज़", "mr": "कागदपत्रे"},
+    "nav_admin": {"en": "Admin", "hi": "प्रशासन", "mr": "प्रशासन"},
+    "nav_account": {"en": "Account", "hi": "खाता", "mr": "खाते"},
+    "nav_login": {"en": "Login", "hi": "लॉगिन", "mr": "लॉगिन"},
+    "nav_logout": {"en": "Logout", "hi": "लॉगआउट", "mr": "लॉगआउट"},
+    "language": {"en": "Language", "hi": "भाषा", "mr": "भाषा"},
 }
 
 

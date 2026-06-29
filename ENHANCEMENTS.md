@@ -55,7 +55,7 @@ following still need a human:
 
 ## Multi-language Support
 - [x] Hindi (primary) — UI chrome (navigation, language switch) translated; framework in `app/i18n.py`, language remembered in a `lang` cookie
-- [ ] Marathi — framework ready (add `"mr"` to `SUPPORTED` + strings); not yet translated
+- [x] Marathi — UI chrome translated (नेव्हिगेशन + language switch); add more strings to `_STRINGS` as pages are translated
 - [x] Language toggle in UI — switcher in the top bar (`/lang/{code}`)
 - [~] Store scheme data in multiple languages — `name_hi` shown when Hindi is active; remaining fields (objective_hi, benefits_hi, name_mr…) still to add
 
