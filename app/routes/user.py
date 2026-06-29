@@ -139,9 +139,17 @@ async def dashboard(request: Request):
     )
 
 
-def _safe_doc_filename(doc: dict) -> str:
-    """A WhatsApp-friendly file name for an approved document."""
-    base = re.sub(r"[^A-Za-z0-9]+", "_", doc.get("document_name") or "document").strip("_")
+def _friendly_doc_filename(doc: dict, full_name: str = None) -> str:
+    """A human-readable file name for a document, e.g. 'Aadhaar-card_Ramesh-Kumar.jpg'.
+
+    Used only for presentation (download / share) — the file is stored on disk
+    under a random UUID, so no name or number ever touches the filesystem path.
+    Filesystem-unsafe characters and whitespace are replaced with hyphens.
+    """
+    parts = [doc.get("document_name") or "document"]
+    if full_name:
+        parts.append(full_name)
+    base = re.sub(r'[\\/:*?"<>|\s]+', "-", "_".join(parts)).strip("-_") or "document"
     ext = os.path.splitext(doc.get("file_path") or "")[1] or ".dat"
     return f"{base}{ext}"
 
@@ -167,7 +175,8 @@ def _build_share(profile: dict, approved_docs: list) -> dict:
             num = f" — {d['doc_number']}" if d.get("doc_number") else ""
             lines.append(f"• {d['document_name']}{num}")
     files = [
-        {"url": f"/documents/file/{d['id']}", "name": _safe_doc_filename(d)}
+        {"url": f"/documents/file/{d['id']}",
+         "name": _friendly_doc_filename(d, profile.get("full_name"))}
         for d in approved_docs if d.get("file_path")
     ]
     return {"text": "\n".join(lines), "files": files}
@@ -402,4 +411,11 @@ async def serve_document_file(request: Request, doc_id: int):
         return Response("Forbidden", status_code=403)
     if not os.path.isfile(doc["file_path"]):
         return Response("File missing", status_code=404)
-    return FileResponse(doc["file_path"])
+    # Serve with a human-readable name (storage stays a random UUID on disk).
+    owner = await user_service.get_user_by_id(doc["user_id"])
+    owner_profile = user_service.get_profile(owner) if owner else None
+    full_name = owner_profile.get("full_name") if owner_profile else None
+    filename = _friendly_doc_filename(doc, full_name)
+    return FileResponse(
+        doc["file_path"], filename=filename, content_disposition_type="inline",
+    )

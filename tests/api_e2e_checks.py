@@ -158,8 +158,11 @@ def run(base):
           "Aadhaar card" in docs_page and "Pending" in docs_page)
     doc_file_id = first_int(r'href="/documents/file/(\d+)"', docs_page)
     check("found document file link id", doc_file_id is not None, "no file link")
-    check("owner GET /documents/file/{id} -> 200",
-          user.get(f"/documents/file/{doc_file_id}").status_code == 200)
+    fr = user.get(f"/documents/file/{doc_file_id}")
+    check("owner GET /documents/file/{id} -> 200", fr.status_code == 200)
+    cd = fr.headers.get("content-disposition", "")
+    check("file served inline with friendly name (no UUID/PII)",
+          "inline" in cd and "Aadhaar-card" in cd and "API-User" in cd)
     # a different logged-in user must NOT read it
     other = new_client(base); signup(other, "nosyuser", "9000010002")
     check("other user GET that file -> 403",
