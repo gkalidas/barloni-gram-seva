@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Offline — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card text-center">
+    <h1>You're offline</h1>
+    <p class="muted">This page isn't available without an internet connection.</p>
+    <p>Please check your connection and try again. Pages you've already opened
+       may still work offline.</p>
+    <a class="btn btn-green" href="/">Go to home</a>
+</div>
+{% endblock %}

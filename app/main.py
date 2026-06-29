@@ -166,7 +166,7 @@ def create_app() -> FastAPI:
 
     # Routers (imported here to avoid circular imports)
     from app.routes import (
-        public, auth_routes, user, admin, complaints, officials, approvals,
+        public, auth_routes, user, admin, complaints, officials, approvals, pwa,
     )
 
     app.include_router(public.router)
@@ -176,6 +176,7 @@ def create_app() -> FastAPI:
     app.include_router(complaints.router)
     app.include_router(officials.router)
     app.include_router(approvals.router)
+    app.include_router(pwa.router)
 
     @app.on_event("startup")
     async def on_startup():

@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="/static/css/style.css?v={{ asset_version }}">
     {# White-label theme: override the base palette from config (validated hex). #}
     <style>:root{--blue:{{ brand_primary }};--green:{{ brand_accent }};}</style>
+    {# PWA: installable + offline support. #}
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="{{ brand_primary }}">
+    <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 </head>
 <body>
 <header class="topbar">
@@ -55,5 +59,12 @@
 </footer>
 
 <script src="/static/js/main.js?v={{ asset_version }}"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+</script>
 </body>
 </html>

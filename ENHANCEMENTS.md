@@ -60,10 +60,10 @@ following still need a human:
 - [ ] Store scheme data in multiple languages (name_hi, name_mr, objective_hi, etc.)
 
 ## Offline / Low-bandwidth Mode
-- [ ] PWA (Progressive Web App) with service worker for offline access
-- [ ] Cache scheme data locally
-- [ ] Queue profile submissions for sync when online
-- [ ] Compressed assets, lazy loading
+- [x] PWA (Progressive Web App) with service worker for offline access — `/manifest.webmanifest`, `/sw.js` (root scope), `/offline`; installable, themed from branding config
+- [x] Cache scheme data locally — public pages (`/`, `/schemes`, `/help`, `/officials`) + static assets cached; private pages deliberately never cached (shared-device safety)
+- [ ] Queue profile submissions for sync when online (needs Background Sync API)
+- [ ] Compressed assets, lazy loading (gzip/brotli is best handled at the reverse proxy)
 
 ## White-labeling
 - [x] Village name / branding from config file (`VILLAGE_NAME`, `APP_NAME`, `BRAND_EMOJI`, `BRAND_TAGLINE`)
