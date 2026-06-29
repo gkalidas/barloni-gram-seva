@@ -78,6 +78,10 @@ login_failures_ip = SlidingWindowLimiter(max_events=40, window_seconds=300)
 # but automated mass account creation still gets stopped.
 signup_attempts = SlidingWindowLimiter(max_events=20, window_seconds=3600)
 
+# Complaints filed per user: a light cap to curb spam without hindering a
+# genuine villager reporting several distinct issues.
+complaint_submissions = SlidingWindowLimiter(max_events=10, window_seconds=3600)
+
 
 def login_is_blocked(ip: str, username: str) -> int:
     """Return seconds-to-wait if login is currently throttled, else 0."""

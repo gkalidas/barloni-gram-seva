@@ -1,0 +1,10 @@
+{% macro status_pill(s) %}
+{%- if s == 'resolved' %}<span class="pill pill-green">Resolved</span>
+{%- elif s == 'rejected' %}<span class="pill pill-red">Rejected</span>
+{%- elif s == 'withdrawn' %}<span class="pill">Withdrawn</span>
+{%- elif s == 'in_progress' %}<span class="pill pill-orange">In progress</span>
+{%- elif s == 'acknowledged' %}<span class="pill pill-orange">Acknowledged</span>
+{%- else %}<span class="pill pill-orange">Submitted</span>{%- endif %}
+{% endmacro %}
+
+{% macro label(s) %}{{ (s or '') | replace('_', ' ') | title }}{% endmacro %}

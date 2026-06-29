@@ -135,12 +135,13 @@ def create_app() -> FastAPI:
     templates.env.globals["asset_version"] = _asset_version()
 
     # Routers (imported here to avoid circular imports)
-    from app.routes import public, auth_routes, user, admin
+    from app.routes import public, auth_routes, user, admin, complaints
 
     app.include_router(public.router)
     app.include_router(auth_routes.router)
     app.include_router(user.router)
     app.include_router(admin.router)
+    app.include_router(complaints.router)
 
     @app.on_event("startup")
     async def on_startup():

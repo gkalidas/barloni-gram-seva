@@ -85,6 +85,36 @@ CREATE TABLE IF NOT EXISTS schemes (
 """
 
 
+CREATE_COMPLAINTS = """
+CREATE TABLE IF NOT EXISTS complaints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,            -- the filer (internal; never shown publicly)
+    category TEXT NOT NULL,
+    ward TEXT,
+    description TEXT NOT NULL,
+    photo_path TEXT,                     -- optional stored photo (issue evidence)
+    status TEXT NOT NULL DEFAULT 'submitted',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+"""
+
+CREATE_COMPLAINT_HISTORY = """
+CREATE TABLE IF NOT EXISTS complaint_status_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    complaint_id INTEGER NOT NULL,
+    old_status TEXT,
+    new_status TEXT NOT NULL,
+    note TEXT,
+    changed_by INTEGER,                  -- admin/user who made the change (audit trail)
+    changed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (complaint_id) REFERENCES complaints(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+);
+"""
+
+
 def _ensure_data_dir() -> None:
     """Make sure the directory that holds the SQLite file exists."""
     db_dir = os.path.dirname(settings.DATABASE_PATH)
@@ -118,6 +148,8 @@ async def init_db() -> None:
         await db.execute(CREATE_DOCUMENTS)
         await db.execute(CREATE_USER_DOCUMENTS)
         await db.execute(CREATE_SCHEMES)
+        await db.execute(CREATE_COMPLAINTS)
+        await db.execute(CREATE_COMPLAINT_HISTORY)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await db.commit()

@@ -35,5 +35,12 @@ class Settings:
     VILLAGE_NAME: str = os.getenv("VILLAGE_NAME", "Barloni")
     APP_NAME: str = os.getenv("APP_NAME", "Gram Seva")
 
+    # Complaints: wards/areas a villager can pick from (per-village list).
+    COMPLAINT_WARDS: list = [
+        w.strip() for w in os.getenv(
+            "COMPLAINT_WARDS", "Ward 1,Ward 2,Ward 3,Ward 4,Ward 5"
+        ).split(",") if w.strip()
+    ]
+
 
 settings = Settings()

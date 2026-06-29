@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "complaints/_macros.html" import status_pill, label %}
+{% block title %}Complaint #{{ complaint.id }} — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<p><a href="/complaints">&larr; All complaints</a></p>
+<h1>Complaint #{{ complaint.id }} {{ status_pill(complaint.status) }}</h1>
+
+<div class="card">
+    <div class="detail-row"><div class="k">Category</div><div class="v">{{ label(complaint.category) }}</div></div>
+    <div class="detail-row"><div class="k">Ward / area</div><div class="v">{{ complaint.ward or '—' }}</div></div>
+    <div class="detail-row"><div class="k">Reported</div><div class="v">{{ complaint.created_at }}</div></div>
+    <div class="detail-row"><div class="k">Description</div><div class="v">{{ complaint.description }}</div></div>
+    {% if complaint.photo_path %}
+    <div class="detail-row"><div class="k">Photo</div><div class="v"><a href="/complaints/{{ complaint.id }}/photo" target="_blank">View photo</a></div></div>
+    {% endif %}
+</div>
+
+{% if is_owner and complaint.status == 'submitted' %}
+<form method="post" action="/complaints/{{ complaint.id }}/withdraw" data-confirm="Withdraw this complaint?" style="margin-bottom:1rem">
+    <button class="btn btn-sm btn-red" type="submit">Withdraw complaint</button>
+</form>
+{% endif %}
+
+<div class="card">
+    <h3>Status history</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>When</th><th>Status</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for h in history %}
+        <tr>
+            <td><span class="muted">{{ h.changed_at }}</span></td>
+            <td>{{ status_pill(h.new_status) }}</td>
+            <td>{{ h.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

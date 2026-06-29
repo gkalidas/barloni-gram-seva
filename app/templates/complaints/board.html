@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "complaints/_macros.html" import status_pill, label %}
+{% block title %}Complaints — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<div class="inline-actions" style="justify-content:space-between;align-items:center;flex-wrap:wrap">
+    <h1>Community Complaints</h1>
+    {% if user %}
+    <a class="btn btn-green" href="/complaints/new">Report an issue</a>
+    {% else %}
+    <a class="btn btn-green" href="/login?next=/complaints/new">Log in to report</a>
+    {% endif %}
+</div>
+<p class="muted">Issues reported by residents and their current status. Complaints are shown anonymously — who filed them is never displayed.</p>
+
+<form method="get" class="card" style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-end">
+    <div class="field" style="margin:0">
+        <label>Category</label>
+        <select name="category">
+            <option value="">All</option>
+            {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c==category else '' }}>{{ label(c) }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="field" style="margin:0">
+        <label>Ward / area</label>
+        <select name="ward">
+            <option value="">All</option>
+            {% for w in wards %}<option value="{{ w }}" {{ 'selected' if w==ward else '' }}>{{ w }}</option>{% endfor %}
+        </select>
+    </div>
+    <div class="field" style="margin:0">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All</option>
+            {% for s in ['submitted','acknowledged','in_progress','resolved','rejected','withdrawn'] %}
+            <option value="{{ s }}" {{ 'selected' if s==status else '' }}>{{ label(s) }}</option>{% endfor %}
+        </select>
+    </div>
+    <button class="btn" type="submit">Filter</button>
+</form>
+
+{% if complaints %}
+<div class="table-wrap">
+<table>
+    <thead><tr><th>#</th><th>Category</th><th>Ward</th><th>Issue</th><th>Status</th><th>Reported</th></tr></thead>
+    <tbody>
+    {% for c in complaints %}
+    <tr>
+        <td><a href="/complaints/{{ c.id }}">#{{ c.id }}</a></td>
+        <td>{{ label(c.category) }}</td>
+        <td>{{ c.ward or '—' }}</td>
+        <td>{{ c.description | truncate(80) }}</td>
+        <td>{{ status_pill(c.status) }}</td>
+        <td><span class="muted">{{ c.created_at }}</span></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="card text-center"><p class="muted">No complaints to show.</p></div>
+{% endif %}
+
+{% if user %}<p style="margin-top:1rem"><a href="/my/complaints">My complaints &rarr;</a></p>{% endif %}
+{% endblock %}

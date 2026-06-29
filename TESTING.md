@@ -123,6 +123,20 @@ it; each line is **action → expected result**.
 - [ ] With strong creds but `SESSION_COOKIE_SECURE=false` → warns but starts
 - [ ] With everything set → starts; server header hidden
 
+## P. Complaints module
+- [ ] `/complaints` board is visible **without login**
+- [ ] Logged-out "Report an issue" → sends you to login first
+- [ ] File a complaint (category + ward + description, optional photo) → lands on its detail page
+- [ ] Invalid/blank category or empty description → rejected
+- [ ] Public board + detail show the complaint **without revealing who filed it**
+- [ ] Optional photo: uploaded photo opens via the complaint's "View photo" link
+- [ ] "My complaints" lists your own complaints with their status
+- [ ] Withdraw a still-"submitted" complaint → status becomes Withdrawn; can't withdraw after admin has acted
+- [ ] Admin `/admin/complaints` lists complaints **with** the filer's name + filters (category/ward/status)
+- [ ] Admin updates status with a note → public detail shows the new status; audit trail records who/when/note
+- [ ] Admin dashboard shows the "Open complaints" count
+- [ ] File many complaints quickly → rate limit kicks in (try again later)
+
 ## O. Data integrity / edge cases
 - [ ] Restart the app mid-use → existing data (users, schemes, docs, requests) all persist
 - [ ] A scheme with **no eligibility rules** → shows as eligible for any user with a profile

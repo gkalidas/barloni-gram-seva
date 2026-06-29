@@ -293,6 +293,61 @@ def run(base):
     check("share data includes approved document file link",
           "documents/file/" in pp)
 
+    # ---------- Complaints module ----------
+    section("Complaints (public board, file, track, withdraw)")
+    # board is public; filing requires login
+    br = anon.get("/complaints")
+    check("public complaints board loads",
+          br.status_code == 200 and "Community Complaints" in br.text)
+    check("anon GET /complaints/new -> 303 login",
+          anon.get("/complaints/new").status_code == 303)
+
+    comp = new_client(base)
+    signup(comp, "complainer", "9000020001")
+    check("GET /complaints/new (auth) -> 200", comp.get("/complaints/new").status_code == 200)
+    r = comp.post("/complaints",
+                  data={"category": "water", "ward": "Ward 2",
+                        "description": "No water supply for three days in our street."},
+                  files={"file": ("issue.png", PNG, "image/png")})
+    check("file a complaint -> 303", r.status_code == 303)
+    cid = first_int(r"/complaints/(\d+)", r.headers.get("location", ""))
+    check("redirected to the new complaint", cid is not None, r.headers.get("location"))
+
+    det = anon.get(f"/complaints/{cid}")
+    check("public detail loads", det.status_code == 200 and "No water supply" in det.text)
+    check("public detail hides filer identity", "complainer" not in det.text)
+    check("complaint starts as Submitted", "Submitted" in det.text)
+    check("complaint photo served publicly -> 200",
+          anon.get(f"/complaints/{cid}/photo").status_code == 200)
+    br = anon.get("/complaints")
+    check("complaint shown on public board", ("#%d" % cid) in br.text)
+    check("public board hides filer identity", "complainer" not in br.text)
+    check("invalid category -> 400",
+          comp.post("/complaints", data={"category": "nonsense", "description": "x"}).status_code == 400)
+    check("my complaints lists it",
+          ("#%d" % cid) in comp.get("/my/complaints").text)
+
+    # admin sees the filer and can move it through statuses
+    ac = admin.get("/admin/complaints")
+    check("admin list shows filer identity", ac.status_code == 200 and "complainer" in ac.text)
+    check("admin complaint detail shows filer",
+          "complainer" in admin.get(f"/admin/complaints/{cid}").text)
+    r = admin.post(f"/admin/complaints/{cid}/status",
+                   data={"status": "in_progress", "note": "Sent to water dept"})
+    check("admin status update -> 303", r.status_code == 303)
+    det = anon.get(f"/complaints/{cid}")
+    check("public detail reflects new status", "In progress" in det.text)
+    check("status note recorded in history", "Sent to water dept" in det.text)
+
+    # withdraw a fresh (submitted) complaint
+    r = comp.post("/complaints", data={"category": "roads", "description": "Pothole on main road."})
+    cid2 = first_int(r"/complaints/(\d+)", r.headers.get("location", ""))
+    check("withdraw own submitted complaint -> 303",
+          comp.post(f"/complaints/{cid2}/withdraw").status_code == 303)
+    check("withdrawn status shown", "Withdrawn" in anon.get(f"/complaints/{cid2}").text)
+    check("admin dashboard shows open-complaints stat",
+          "Open complaints" in admin.get("/admin").text)
+
     # ---------- Security ----------
     section("Security (HTTP)")
     h = anon.get("/").headers

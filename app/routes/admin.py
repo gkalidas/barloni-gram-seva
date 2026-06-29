@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Resp
 from app.auth import require_admin
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
-    user_document_service,
+    user_document_service, complaint_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -69,6 +69,7 @@ async def admin_dashboard(request: Request):
             "pending_doc_count": await user_document_service.count_pending_document_requests(),
             "user_count": await user_service.count_users(),
             "scheme_count": await scheme_service.count_schemes(),
+            "complaint_open_count": await complaint_service.count_open_complaints(),
         },
     )
 

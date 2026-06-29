@@ -19,11 +19,15 @@ following still need a human:
       Security Enhancements below.
 
 ## Phase 2 — Complaints Module
-- [ ] Complaint categories: water, electricity, garbage, roads, drainage, common/other
-- [ ] Complaint form: category, description, ward/area, optional photo upload
-- [ ] Complaint status tracking: submitted → acknowledged → in progress → resolved
-- [ ] Admin view: complaints dashboard with filtering by category, ward, status
+- [x] Complaint categories: water, electricity, garbage, roads, drainage, other
+- [x] Complaint form: category, ward/area, description, optional photo upload
+- [x] Complaint status tracking: submitted → acknowledged → in progress → resolved (+ rejected/withdrawn)
+- [x] Admin view: complaints dashboard with filtering by category, ward, status
+- [x] Public **anonymous** community board (filer identity kept to the admin/audit trail only)
+- [x] Filer can withdraw a still-"submitted" complaint; per-user rate limit on filing
+- [x] Status-change audit trail (who changed what, when, with a note)
 - [ ] Ward-level complaint analytics ("15 water complaints from Ward 3 this month")
+- [ ] Notify the filer when their complaint status changes
 
 ## Data Collection
 - [ ] Agentic data collector: AI agent that scrapes government portals, structures scheme data and eligibility rules, loops until coverage is complete

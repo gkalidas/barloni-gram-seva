@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "complaints/_macros.html" import status_pill, label %}
+{% block title %}Complaint #{{ complaint.id }} — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin/complaints">&larr; All complaints</a></p>
+<h1>Complaint #{{ complaint.id }} {{ status_pill(complaint.status) }}</h1>
+
+<div class="card">
+    <div class="detail-row"><div class="k">Filer</div><div class="v">{{ complaint.filer_username }} ({{ complaint.filer_mobile }})</div></div>
+    <div class="detail-row"><div class="k">Category</div><div class="v">{{ label(complaint.category) }}</div></div>
+    <div class="detail-row"><div class="k">Ward / area</div><div class="v">{{ complaint.ward or '—' }}</div></div>
+    <div class="detail-row"><div class="k">Reported</div><div class="v">{{ complaint.created_at }}</div></div>
+    <div class="detail-row"><div class="k">Description</div><div class="v">{{ complaint.description }}</div></div>
+    {% if complaint.photo_path %}
+    <div class="detail-row"><div class="k">Photo</div><div class="v"><a href="/complaints/{{ complaint.id }}/photo" target="_blank">View photo</a></div></div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Update status</h3>
+    <form method="post" action="/admin/complaints/{{ complaint.id }}/status">
+        <div class="field">
+            <label for="status">New status</label>
+            <select id="status" name="status" required>
+                {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s==complaint.status else '' }}>{{ label(s) }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="note">Note <span class="hint">(optional, recorded in the history)</span></label>
+            <textarea id="note" name="note" rows="2" placeholder="e.g. Forwarded to the water department"></textarea>
+        </div>
+        <button class="btn btn-green" type="submit">Update status</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Audit trail</h3>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>When</th><th>Change</th><th>By</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for h in history %}
+        <tr>
+            <td><span class="muted">{{ h.changed_at }}</span></td>
+            <td>{{ label(h.old_status) if h.old_status else '—' }} &rarr; {{ status_pill(h.new_status) }}</td>
+            <td>{{ h.by_username or '—' }}</td>
+            <td>{{ h.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

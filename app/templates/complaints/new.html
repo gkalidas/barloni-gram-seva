@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "complaints/_macros.html" import label %}
+{% block title %}Report an issue — {{ village_name }} {{ app_name }}{% endblock %}
+{% block content %}
+<p><a href="/complaints">&larr; All complaints</a></p>
+<h1>Report an issue</h1>
+<p class="muted">Your complaint appears on the public board anonymously — your name is never shown there.</p>
+
+<div class="card">
+    <form method="post" action="/complaints" enctype="multipart/form-data">
+        <div class="field">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+                <option value="">Select…</option>
+                {% for c in categories %}<option value="{{ c }}" {{ 'selected' if values.category==c else '' }}>{{ label(c) }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="ward">Ward / area <span class="hint">(optional)</span></label>
+            <select id="ward" name="ward">
+                <option value="">Select…</option>
+                {% for w in wards %}<option value="{{ w }}" {{ 'selected' if values.ward==w else '' }}>{{ w }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="description">Describe the issue</label>
+            <textarea id="description" name="description" rows="4" required placeholder="What is the problem, and where exactly?">{{ values.description or '' }}</textarea>
+        </div>
+        <div class="field">
+            <label for="file">Photo <span class="hint">(optional)</span></label>
+            <input type="file" id="file" name="file" accept=".jpg,.jpeg,.png,.pdf,image/*,application/pdf">
+            <span class="hint">A clear photo helps. Allowed: jpg, jpeg, png, pdf · up to 5 MB.</span>
+        </div>
+        <button class="btn btn-green btn-block" type="submit">Submit complaint</button>
+    </form>
+</div>
+{% endblock %}
