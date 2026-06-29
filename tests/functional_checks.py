@@ -435,6 +435,19 @@ def run():
               "Updates on your requests" not in helper.get("/admin").text)
         run_async(_aps.set_level("scheme.create", "none"))  # restore for later sections
 
+        # New-scheme-match notification: first dashboard view initialises
+        # silently; a newly-added matching scheme then flags once.
+        check("first dashboard view shows no new-match banner",
+              "new scheme(s) match" not in e.get("/dashboard").text)
+        admin.post("/admin/schemes/add",
+                   data={"name": "Fresh Match Scheme", "status": "active"},
+                   follow_redirects=False)
+        dash_e = e.get("/dashboard").text
+        check("new matching scheme flagged on dashboard",
+              "new scheme(s) match" in dash_e and "Fresh Match Scheme" in dash_e)
+        check("new-match banner clears after being shown",
+              "new scheme(s) match" not in e.get("/dashboard").text)
+
         section("O. Data integrity / edge cases")
         # scheme with no rules eligible to anyone with a profile
         admin.post("/admin/schemes/add", data={"name": "Open To All", "status": "active"},

@@ -237,6 +237,35 @@ async def request_profile_change(user_id: int, old_profile: dict,
         await db.close()
 
 
+async def sync_seen_schemes(user_id: int, current_ids: list) -> list:
+    """Diff the user's currently-eligible scheme ids against what they've been
+    shown, persist the new set, and return the *newly* matching ids.
+
+    The first time this runs for a user (column is NULL) we initialise silently
+    — no "new match" banner for schemes they already qualified for at sign-up.
+    """
+    current = sorted({int(i) for i in current_ids})
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT seen_scheme_ids FROM users WHERE id = ?", (user_id,))
+        row = await cursor.fetchone()
+        raw = row["seen_scheme_ids"] if row else None
+        first_time = raw is None
+        try:
+            seen = set(json.loads(raw)) if raw else set()
+        except (json.JSONDecodeError, TypeError):
+            seen = set()
+        new_ids = [] if first_time else [i for i in current if i not in seen]
+        await db.execute(
+            "UPDATE users SET seen_scheme_ids = ? WHERE id = ?",
+            (json.dumps(current), user_id))
+        await db.commit()
+    finally:
+        await db.close()
+    return new_ids
+
+
 async def has_pending_request(user_id: int) -> bool:
     db = await get_db()
     try:

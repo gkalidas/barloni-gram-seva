@@ -74,7 +74,7 @@ following still need a human:
 - [ ] Rule versioning: track when eligibility rules change
 - [x] Partial eligibility: "you meet 4/5 criteria, missing: BPL card" — shown on `/my-schemes`
 - [x] Recommended actions: "get a BPL card to qualify for 3 more schemes" — shown on `/my-schemes`
-- [ ] Notification when new schemes match a user's profile
+- [x] Notification when new schemes match a user's profile — dashboard banner flags schemes that newly match (tracked via `users.seen_scheme_ids`)
 
 ## Security Enhancements
 - [x] Rate limiting on login/signup (per-account + per-IP; in-process)

@@ -123,11 +123,16 @@ async def dashboard(request: Request):
     user = await require_user(request)
     profile = user_service.get_profile(user)
     eligible_count = 0
+    new_matches = []
     if profile:
         schemes = await scheme_service.list_schemes(only_active=True)
-        eligible_count = len(
-            eligibility_service.matching_schemes(profile, schemes)
-        )
+        eligible = eligibility_service.matching_schemes(profile, schemes)
+        eligible_count = len(eligible)
+        # Flag schemes that match now but hadn't been shown to this user before.
+        new_ids = await user_service.sync_seen_schemes(
+            user["id"], [s["id"] for s in eligible])
+        new_set = set(new_ids)
+        new_matches = [s for s in eligible if s["id"] in new_set]
     pending = await user_service.has_pending_request(user["id"])
     latest_request = await user_service.latest_change_request(user["id"])
     complaint_updates = await complaint_service.count_unseen_for_user(user["id"])
@@ -139,6 +144,7 @@ async def dashboard(request: Request):
             "profile": profile,
             "profile_submitted": bool(user.get("profile_submitted")),
             "eligible_count": eligible_count,
+            "new_matches": new_matches,
             "has_pending": pending,
             "latest_request": latest_request,
             "complaint_updates": complaint_updates,

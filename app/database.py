@@ -252,6 +252,9 @@ async def init_db() -> None:
         await _ensure_column(db, "users", "active", "INTEGER DEFAULT 1")
         await _ensure_column(db, "schemes", "views", "INTEGER DEFAULT 0")
         await _ensure_column(db, "approval_requests", "initiator_seen", "INTEGER DEFAULT 0")
+        # JSON list of scheme ids already shown to the user as "you qualify",
+        # so we can flag newly-matching schemes. NULL = not yet initialised.
+        await _ensure_column(db, "users", "seen_scheme_ids", "TEXT")
         await db.commit()
     finally:
         await db.close()

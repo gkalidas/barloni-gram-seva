@@ -13,6 +13,18 @@
 </div>
 {% endif %}
 
+{% if new_matches %}
+<div class="card" style="border-left:4px solid var(--green);margin-bottom:1rem">
+    <h3 style="margin-top:0">🎉 {{ new_matches|length }} new scheme(s) match your profile</h3>
+    <ul class="clean" style="margin:0.25rem 0">
+        {% for s in new_matches %}
+        <li><a href="/schemes/{{ s.id }}">{{ s.name }}</a>{% if s.ministry %} <span class="muted">· {{ s.ministry }}</span>{% endif %}</li>
+        {% endfor %}
+    </ul>
+    <a class="btn btn-sm btn-green" style="margin-top:0.5rem" href="/my-schemes">View all eligible schemes</a>
+</div>
+{% endif %}
+
 <div class="stats" style="margin-bottom:1.2rem">
     <div class="stat green">
         <span class="num">{{ eligible_count }}</span>
