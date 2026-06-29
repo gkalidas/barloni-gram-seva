@@ -9,7 +9,7 @@ from app.auth import require_admin, hash_password, password_problems
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
     user_document_service, complaint_service, activity_service, approval_service,
-    analytics_service,
+    analytics_service, migration_service,
 )
 from app.constants import (
     GENDERS, CASTE_CATEGORIES, OCCUPATIONS, LAND_OWNERSHIP,
@@ -587,7 +587,7 @@ async def data_page(request: Request):
     return await _render_data(request, user, None)
 
 
-async def _render_data(request, user, result):
+async def _render_data(request, user, result, catalogue_result=None):
     return _templates(request).TemplateResponse(
         request,
         "admin/data.html",
@@ -597,8 +597,52 @@ async def _render_data(request, user, result):
             "user_count": await user_service.count_users(),
             "scheme_count": await scheme_service.count_schemes(),
             "result": result,
+            "catalogue_result": catalogue_result,
         },
     )
+
+
+def _json_download(payload: dict, filename: str) -> Response:
+    return Response(
+        content=json.dumps(payload, indent=2, ensure_ascii=False),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/admin/export/backup.json")
+async def export_backup_route(request: Request):
+    """Full point-in-time backup of every table (includes PII — sensitive)."""
+    admin = await require_admin(request)
+    await activity_service.log(admin, "data.export_backup", "Downloaded a full JSON backup")
+    return _json_download(await migration_service.export_backup(), "gramseva-backup.json")
+
+
+@router.get("/admin/export/catalogue.json")
+async def export_catalogue_route(request: Request):
+    """Shareable catalogue (schemes + documents + officials), no personal data."""
+    await require_admin(request)
+    return _json_download(await migration_service.export_catalogue(), "gramseva-catalogue.json")
+
+
+@router.post("/admin/import/catalogue", response_class=HTMLResponse)
+async def import_catalogue_route(request: Request, file: UploadFile = File(...)):
+    admin = await require_admin(request)
+    raw = await file.read()
+    if not raw:
+        return await _render_data(request, admin, None,
+                                  {"error": "No file uploaded."})
+    try:
+        payload = json.loads(raw.decode("utf-8-sig"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return await _render_data(request, admin, None,
+                                  {"error": f"Not valid JSON: {exc}"})
+    summary = await migration_service.import_catalogue(payload)
+    await activity_service.log(
+        admin, "data.import_catalogue",
+        f"Imported catalogue: +{summary['schemes']['added']} scheme(s), "
+        f"+{summary['officials']['added']} official(s)")
+    return await _render_data(request, admin, None, summary)
 
 
 @router.post("/admin/import/users", response_class=HTMLResponse)

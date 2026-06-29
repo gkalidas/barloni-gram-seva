@@ -89,6 +89,6 @@ following still need a human:
 - [ ] Move rate-limit + session store to Redis when scaling past one worker
 
 ## Data Migration
-- [ ] SQLite → PostgreSQL migration script
-- [ ] Export all data as JSON for backup / transfer
-- [ ] Import from JSON to bootstrap new village instance
+- [x] SQLite → PostgreSQL migration script — `scripts/sqlite_to_postgres.py` (dependency-free; emits schema + data + sequence resets)
+- [x] Export all data as JSON for backup / transfer — `/admin/export/backup.json` (full dump)
+- [x] Import from JSON to bootstrap new village instance — `/admin/export/catalogue.json` + idempotent `/admin/import/catalogue` (schemes, documents, officials; no PII)

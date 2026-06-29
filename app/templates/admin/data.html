@@ -65,6 +65,47 @@
     </div>
 </div>
 
+{% if catalogue_result %}
+    {% if catalogue_result.error %}
+    <div class="flash flash-error">{{ catalogue_result.error }}</div>
+    {% else %}
+    <div class="flash flash-success">
+        <strong>Catalogue import complete.</strong>
+        Schemes +{{ catalogue_result.schemes.added }} ({{ catalogue_result.schemes.skipped }} existing),
+        officials +{{ catalogue_result.officials.added }} ({{ catalogue_result.officials.skipped }} existing),
+        documents +{{ catalogue_result.documents.added }}.
+        {% if catalogue_result.errors %}{{ catalogue_result.errors | length }} issue(s).{% endif %}
+    </div>
+    {% endif %}
+{% endif %}
+
+<h2 style="margin-top:1.5rem">Backup &amp; transfer (JSON)</h2>
+<div class="grid grid-2">
+    <div class="card">
+        <h3>Full backup</h3>
+        <p class="muted">Download every table as one JSON file — for backups or
+            moving this instance. <strong>Holds personal data</strong> (and password
+            hashes); store it somewhere safe.</p>
+        <a class="btn btn-block" href="/admin/export/backup.json">Download full backup</a>
+    </div>
+    <div class="card">
+        <h3>Scheme catalogue</h3>
+        <p class="muted">Share schemes, the document list, and the officials
+            directory with another village — no personal data. Importing skips
+            anything that already exists, so it's safe to re-run.</p>
+        <div class="inline-actions">
+            <a class="btn btn-sm btn-outline" href="/admin/export/catalogue.json">Export catalogue</a>
+        </div>
+        <form method="post" action="/admin/import/catalogue" enctype="multipart/form-data" style="margin-top:0.8rem">
+            <div class="field">
+                <label for="catalogue_file">Import catalogue (JSON)</label>
+                <input type="file" id="catalogue_file" name="file" accept=".json,application/json" required>
+            </div>
+            <button class="btn btn-block" type="submit">Import catalogue</button>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <h3>How it works</h3>
     <ul class="clean">
