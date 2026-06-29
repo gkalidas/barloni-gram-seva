@@ -1,8 +1,22 @@
 """Application configuration loaded from environment / .env file."""
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
+
+_HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def _color(env_name: str, default: str) -> str:
+    """Read a hex colour from the environment, falling back to a safe default.
+
+    Validated so an operator-supplied value can only ever be a `#rgb`/`#rrggbb`
+    colour — it is injected into a <style> block, so this also blocks CSS/HTML
+    injection via the branding config.
+    """
+    value = (os.getenv(env_name) or "").strip()
+    return value if _HEX_COLOR.match(value) else default
 
 
 class Settings:
@@ -34,6 +48,14 @@ class Settings:
     # Village branding (white-label)
     VILLAGE_NAME: str = os.getenv("VILLAGE_NAME", "Barloni")
     APP_NAME: str = os.getenv("APP_NAME", "Gram Seva")
+    # Emoji/character shown as the logo mark in the top bar.
+    BRAND_EMOJI: str = (os.getenv("BRAND_EMOJI", "").strip() or "🏛️")
+    # Footer tagline.
+    BRAND_TAGLINE: str = os.getenv(
+        "BRAND_TAGLINE", "A village civic platform · Built for the community")
+    # Theme colours (validated hex). Primary = top bar / links; accent = CTAs.
+    BRAND_PRIMARY: str = _color("BRAND_PRIMARY", "#1a365d")
+    BRAND_ACCENT: str = _color("BRAND_ACCENT", "#2f855a")
 
     # Complaints: wards/areas a villager can pick from (per-village list).
     COMPLAINT_WARDS: list = [

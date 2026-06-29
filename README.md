@@ -159,10 +159,25 @@ ADMIN_MOBILE=9999999999
 Each village can customise its instance via `.env`:
 
 - `VILLAGE_NAME` / `APP_NAME` — branding shown in the header and titles
+- `COMPLAINT_WARDS` — comma-separated ward/area list for this village
+  (e.g. `Ward 1,Ward 2,Main Bazaar`)
 - `HOST` / `PORT` — where the server listens (default `127.0.0.1:8000`).
   Set `HOST=0.0.0.0` to let other devices on the same Wi‑Fi/LAN (e.g. phones)
   open the app at `http://<this-computer-ip>:8000`.
 - `SECRET_KEY` — auto-generated on first run by `start.py`; keep it private.
+
+### Rebrand for your village (white-label)
+
+No code changes needed — set these in `.env` and restart:
+
+- `BRAND_PRIMARY` — primary colour (top bar / links), hex e.g. `#1a365d`
+- `BRAND_ACCENT` — accent colour (buttons / "eligible" highlights), hex e.g. `#2f855a`
+- `BRAND_EMOJI` — the logo mark in the top bar (default `🏛️`)
+- `BRAND_TAGLINE` — the footer tagline
+
+Colours are validated as hex; an invalid value falls back to the default (and
+can never inject CSS). Scheme data is shared across instances; each village's
+user data, complaints, and documents stay in its own local database.
 
 ## Production deployment (internet-facing)
 

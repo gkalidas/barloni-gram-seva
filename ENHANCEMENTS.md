@@ -66,9 +66,9 @@ following still need a human:
 - [ ] Compressed assets, lazy loading
 
 ## White-labeling
-- [ ] Village name / branding from config file
-- [ ] Custom color scheme from config
-- [ ] Deploy guide for any village to self-host
+- [x] Village name / branding from config file (`VILLAGE_NAME`, `APP_NAME`, `BRAND_EMOJI`, `BRAND_TAGLINE`)
+- [x] Custom color scheme from config (`BRAND_PRIMARY`, `BRAND_ACCENT`; validated hex, injected as CSS vars)
+- [x] Deploy guide for any village to self-host — README "Rebrand for your village" + Production deployment + `.env.example`
 
 ## Eligibility Engine Improvements
 - [ ] Rule versioning: track when eligibility rules change

@@ -155,6 +155,11 @@ def create_app() -> FastAPI:
     # Expose common values to all templates
     templates.env.globals["village_name"] = settings.VILLAGE_NAME
     templates.env.globals["app_name"] = settings.APP_NAME
+    # White-label branding exposed to every template.
+    templates.env.globals["brand_emoji"] = settings.BRAND_EMOJI
+    templates.env.globals["brand_tagline"] = settings.BRAND_TAGLINE
+    templates.env.globals["brand_primary"] = settings.BRAND_PRIMARY
+    templates.env.globals["brand_accent"] = settings.BRAND_ACCENT
     # Cache-busting token for static assets — changes whenever the CSS/JS change,
     # so browsers fetch fresh files after an update instead of a stale copy.
     templates.env.globals["asset_version"] = _asset_version()
