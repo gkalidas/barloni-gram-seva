@@ -188,6 +188,17 @@ CREATE TABLE IF NOT EXISTS approval_requests (
 );
 """
 
+CREATE_SCHEME_RULE_HISTORY = """
+CREATE TABLE IF NOT EXISTS scheme_rule_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scheme_id INTEGER NOT NULL,
+    old_rules TEXT,                      -- JSON of eligibility_rules before the change
+    new_rules TEXT,                      -- JSON of eligibility_rules after the change
+    changed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (scheme_id) REFERENCES schemes(id)
+);
+"""
+
 CREATE_APPROVAL_VOTES = """
 CREATE TABLE IF NOT EXISTS approval_votes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,6 +255,7 @@ async def init_db() -> None:
         await db.execute(CREATE_APPROVAL_POLICY)
         await db.execute(CREATE_APPROVAL_REQUESTS)
         await db.execute(CREATE_APPROVAL_VOTES)
+        await db.execute(CREATE_SCHEME_RULE_HISTORY)
         # Migrations for databases created before a column existed.
         await _ensure_column(db, "profile_change_requests", "required_documents", "TEXT")
         await _ensure_column(db, "complaints", "filer_unseen", "INTEGER DEFAULT 0")

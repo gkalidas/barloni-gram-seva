@@ -458,14 +458,12 @@ async def edit_scheme_form(request: Request, scheme_id: int):
     )
     documents = await document_service.list_documents()
     sources = await scheme_service.list_sources(scheme_id)
-    return _templates(request).TemplateResponse(
-        request,
-        "admin/scheme_form.html",
-        _scheme_form_context(
-            request, user, scheme,
-            f"/admin/schemes/{scheme_id}/edit", documents, sources=sources,
-        ),
+    ctx = _scheme_form_context(
+        request, user, scheme,
+        f"/admin/schemes/{scheme_id}/edit", documents, sources=sources,
     )
+    ctx["rule_history"] = await scheme_service.list_rule_history(scheme_id)
+    return _templates(request).TemplateResponse(request, "admin/scheme_form.html", ctx)
 
 
 @router.post("/admin/schemes/{scheme_id}/edit", response_class=HTMLResponse)

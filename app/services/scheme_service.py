@@ -270,9 +270,53 @@ async def delete_source(source_id: int) -> Optional[str]:
     return file_path
 
 
+def _rules_differ(old_raw, new_raw) -> bool:
+    """Compare two eligibility_rules JSON strings by value (order-insensitive)."""
+    def parse(v):
+        if not v:
+            return {}
+        try:
+            return json.loads(v) if isinstance(v, str) else v
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return parse(old_raw) != parse(new_raw)
+
+
+async def list_rule_history(scheme_id: int) -> list:
+    """Eligibility-rule change history for a scheme, newest first."""
+    db = await get_db()
+    try:
+        cursor = await db.execute(
+            "SELECT * FROM scheme_rule_history WHERE scheme_id = ? "
+            "ORDER BY id DESC", (scheme_id,))
+        rows = await cursor.fetchall()
+    finally:
+        await db.close()
+    out = []
+    for r in rows:
+        row = dict(r)
+        for f in ("old_rules", "new_rules"):
+            try:
+                row[f] = json.loads(row[f]) if row[f] else {}
+            except (json.JSONDecodeError, TypeError):
+                row[f] = {}
+        out.append(row)
+    return out
+
+
 async def update_scheme(scheme_id: int, data: dict) -> None:
     db = await get_db()
     try:
+        # Rule versioning: record a history row when eligibility rules change.
+        cursor = await db.execute(
+            "SELECT eligibility_rules FROM schemes WHERE id = ?", (scheme_id,))
+        existing = await cursor.fetchone()
+        old_rules = existing["eligibility_rules"] if existing else None
+        if _rules_differ(old_rules, data.get("eligibility_rules")):
+            await db.execute(
+                """INSERT INTO scheme_rule_history (scheme_id, old_rules, new_rules)
+                   VALUES (?, ?, ?)""",
+                (scheme_id, old_rules, data.get("eligibility_rules")))
         await db.execute(
             """UPDATE schemes SET
                name = ?, name_hi = ?, ministry = ?, category = ?,

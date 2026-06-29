@@ -218,4 +218,26 @@
     <p class="muted">Save the scheme first, then come back to its edit page to attach the GR and source links.</p>
     {% endif %}
 </div>
+
+{# Eligibility rule change history (rule versioning). #}
+{% if scheme and scheme.id and rule_history %}
+<div class="card">
+    <h2>Eligibility rule history</h2>
+    <p class="muted">When this scheme's eligibility rules were changed.</p>
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Changed at</th><th>From</th><th>To</th></tr></thead>
+        <tbody>
+        {% for h in rule_history %}
+        <tr>
+            <td>{{ h.changed_at }}</td>
+            <td><code>{{ h.old_rules | tojson }}</code></td>
+            <td><code>{{ h.new_rules | tojson }}</code></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

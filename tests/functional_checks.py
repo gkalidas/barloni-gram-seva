@@ -459,6 +459,23 @@ def run():
         check("new-match banner clears after being shown",
               "new scheme(s) match" not in e.get("/dashboard").text)
 
+        # Rule versioning: editing eligibility rules records a history row;
+        # editing a non-rule field does not.
+        rv = run_async(scheme_service.get_scheme_by_name("Auto Test Scheme"))
+        if rv:
+            base_h = len(run_async(scheme_service.list_rule_history(rv["id"])))
+            admin.post(f"/admin/schemes/{rv['id']}/edit",
+                       data={"name": "Auto Test Scheme", "status": "active", "min_age": "25"},
+                       follow_redirects=False)
+            after_rule = len(run_async(scheme_service.list_rule_history(rv["id"])))
+            check("rule change is versioned", after_rule == base_h + 1)
+            admin.post(f"/admin/schemes/{rv['id']}/edit",
+                       data={"name": "Auto Test Scheme", "status": "active",
+                             "min_age": "25", "objective": "changed text"},
+                       follow_redirects=False)
+            check("non-rule edit adds no rule-history row",
+                  len(run_async(scheme_service.list_rule_history(rv["id"]))) == after_rule)
+
         section("O. Data integrity / edge cases")
         # scheme with no rules eligible to anyone with a profile
         admin.post("/admin/schemes/add", data={"name": "Open To All", "status": "active"},

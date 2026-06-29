@@ -71,7 +71,7 @@ following still need a human:
 - [x] Deploy guide for any village to self-host — README "Rebrand for your village" + Production deployment + `.env.example`
 
 ## Eligibility Engine Improvements
-- [ ] Rule versioning: track when eligibility rules change
+- [x] Rule versioning: track when eligibility rules change — `scheme_rule_history` records each change; shown on the scheme edit page
 - [x] Partial eligibility: "you meet 4/5 criteria, missing: BPL card" — shown on `/my-schemes`
 - [x] Recommended actions: "get a BPL card to qualify for 3 more schemes" — shown on `/my-schemes`
 - [x] Notification when new schemes match a user's profile — dashboard banner flags schemes that newly match (tracked via `users.seen_scheme_ids`)
