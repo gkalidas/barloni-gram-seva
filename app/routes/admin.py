@@ -5,7 +5,7 @@ import os
 from fastapi import APIRouter, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 
-from app.auth import require_admin, hash_password, password_problems
+from app.auth import require_admin, hash_password, password_problems, is_superadmin
 from app.services import (
     user_service, scheme_service, document_service, import_export_service,
     user_document_service, complaint_service, activity_service, approval_service,
@@ -211,6 +211,8 @@ async def reset_user_password(request: Request, user_id: int):
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return RedirectResponse("/admin/users?msg=User+not+found", status_code=303)
+    if _superadmin_only_target(admin, target):
+        return _redirect_users("Only+a+superadmin+can+manage+a+superadmin+account")
     result = await approval_service.guard(
         admin, "user.reset_password",
         {"user_id": user_id, "password_hash": hash_password(new_password)},
@@ -222,6 +224,13 @@ async def reset_user_password(request: Request, user_id: int):
 
 def _redirect_users(msg: str):
     return RedirectResponse(f"/admin/users?msg={msg}", status_code=303)
+
+
+def _superadmin_only_target(actor: dict, target: dict) -> bool:
+    """True if `actor` may NOT manage `target` because the target is a
+    superadmin and the actor is only a regular admin. Superadmin accounts can
+    only be managed by another superadmin (deactivate / delete / reset / role)."""
+    return target.get("role") == "superadmin" and not is_superadmin(actor)
 
 
 async def _last_active_admin(target: dict) -> bool:
@@ -265,6 +274,8 @@ async def set_user_active(request: Request, user_id: int):
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return _redirect_users("User+not+found")
+    if _superadmin_only_target(admin, target):
+        return _redirect_users("Only+a+superadmin+can+manage+a+superadmin+account")
     if not active and await _last_active_admin(target):
         return _redirect_users("Cannot+deactivate+the+last+admin")
     result = await approval_service.guard(
@@ -283,6 +294,8 @@ async def delete_user_route(request: Request, user_id: int):
     target = await user_service.get_user_by_id(user_id)
     if target is None:
         return _redirect_users("User+not+found")
+    if _superadmin_only_target(admin, target):
+        return _redirect_users("Only+a+superadmin+can+manage+a+superadmin+account")
     if await _last_active_admin(target):
         return _redirect_users("Cannot+delete+the+last+admin")
     result = await approval_service.guard(

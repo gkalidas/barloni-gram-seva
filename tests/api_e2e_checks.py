@@ -616,6 +616,20 @@ def run(base):
     check("regular admin cannot open approval policy -> 403",
           adminA.get("/admin/approval-policy").status_code == 403)
 
+    # A regular admin must not be able to manage a SUPERADMIN account
+    # (deactivate / delete / reset password) — only another superadmin can.
+    suid = find_uid("admin")
+    adminA.post(f"/admin/users/{suid}/active", data={"active": "0"})
+    check("plain admin cannot deactivate the superadmin",
+          su.get("/admin").status_code == 200)
+    adminA.post(f"/admin/users/{suid}/delete")
+    check("plain admin cannot delete the superadmin",
+          su.get("/admin").status_code == 200)
+    adminA.post(f"/admin/users/{suid}/reset-password", data={"new_password": "hacked123"})
+    check("plain admin cannot reset the superadmin's password",
+          new_client(base).post("/login",
+              data={"username": "admin", "password": "admin123"}).status_code == 303)
+
     # policy: deleting a scheme needs a superadmin
     su.post("/admin/approval-policy", data={"level__scheme.delete": "superadmin"})
     su.post("/admin/schemes/add", data={"name": "Gated Scheme A", "status": "active"})
