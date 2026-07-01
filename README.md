@@ -17,6 +17,13 @@ A village-level government scheme information portal. Browse government schemes 
 A bird's-eye view of everything the platform does. Items marked `(planned)` are
 on the roadmap (see `ENHANCEMENTS.md`); everything else is built.
 
+![Feature mind map](docs/feature-mindmap.png)
+
+*(Vector source: [`docs/feature-mindmap.svg`](docs/feature-mindmap.svg).)*
+
+<details>
+<summary>Text version</summary>
+
 ```
 barloni-gram-seva
 │
@@ -93,6 +100,11 @@ barloni-gram-seva
     ├── API e2e checks ......................... real HTTP server (httpx)
     └── ~336 checks ............................ python tests/run_tests.py
 ```
+
+</details>
+
+> The image is generated from `scripts/generate_mindmap.py` — re-run it
+> (`python scripts/generate_mindmap.py`) after changing the feature set.
 
 ## Prerequisites
 
